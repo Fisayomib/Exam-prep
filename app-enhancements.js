@@ -5,6 +5,7 @@ function renderSubjectsPage(){
 }
 
 function renderCalendarPage(){
+  subjects.forEach(syncSubjectTests);
   const events=subjects.flatMap(s=>[
     ...s.tests.map(t=>({...t,subject:s.name,subjectId:s.id,type:'Test'})),
     ...(s.exam?[{name:`${s.name} exam`,date:s.exam,subject:s.name,subjectId:s.id,type:'Exam'}]:[])
@@ -25,6 +26,7 @@ function showStudyPage(name){
   document.querySelectorAll('.nav [data-screen],.mobile-nav [data-screen]').forEach(el=>el.classList.toggle('active',el.dataset.screen===name));
   if(name==='subjects')renderSubjectsPage();
   if(name==='calendar')renderCalendarPage();
+  if(name==='dashboard'){subjects.forEach(syncSubjectTests);renderDashboard();}
   if(['dashboard','subjects','calendar','subject'].includes(name))persistStudyView(name);
   window.scrollTo(0,0);
 }
