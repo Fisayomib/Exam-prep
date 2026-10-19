@@ -11,6 +11,7 @@ A clickable, responsive browser prototype for the exam-preparation app. Open `in
 - Mark topics complete, then access topic practice and whole-subject practice.
 - Use a separate My subjects page and a separate Study calendar page from the left navigation.
 - Work through real flashcard-style front and back cards. A student must type an answer before revealing each back.
+- Choose from ten appearance palettes, preview a choice, and keep it saved in this browser.
 - Upload past questions separately and open a separate past-question practice mode.
 - Save prototype state in this browser using local storage.
 
