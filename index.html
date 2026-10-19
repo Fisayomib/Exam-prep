@@ -62,8 +62,43 @@
     :root[data-mode="dark"] .brand-mark{--mark-accent:var(--lime)}
     :root[data-mode="dark"] .brand-wordmark span:last-child{color:var(--lime)}
   </style>
+  <style>
+    body.auth-required .shell,body.auth-required .mobile-nav{display:none}
+    .auth-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--canvas);color:var(--ink)}
+    body:not(.auth-required) .auth-gate{display:none}
+    .auth-card{width:min(100%,440px);padding:32px;border:1px solid var(--line);border-radius:24px;background:var(--paper);box-shadow:var(--shadow)}
+    .auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:26px;font-size:22px;font-weight:760;letter-spacing:-.04em}
+    .auth-brand-mark{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:var(--green);color:white;font-weight:800}
+    .auth-card h1{font-size:27px;letter-spacing:-.04em;margin:0 0 5px}
+    .auth-card>p{color:var(--muted);margin:0 0 20px}
+    .auth-form .field{margin:13px 0}
+    .auth-form .field input{width:100%}
+    .auth-switch{border:0;background:transparent;color:var(--green);padding:8px 0;font-weight:650}
+    .auth-message{min-height:20px;margin:10px 0 0;color:var(--muted);font-size:13px}
+    .auth-message.error{color:#b42318}
+    .auth-setup{padding:10px 12px;border-radius:10px;background:var(--mint);color:var(--ink);font-size:12px;margin-top:14px}
+    #usernameField[hidden]{display:none}
+    .account-signout{margin-top:13px;padding:7px 0;border:0;background:transparent;color:var(--green);font-size:12px;font-weight:650}
+    @media(max-width:500px){.auth-card{padding:24px}}
+  </style>
 </head>
-<body>
+<body class="auth-required">
+  <section class="auth-gate" id="authGate" aria-label="Student account">
+    <div class="auth-card">
+      <div class="auth-brand"><span class="auth-brand-mark" aria-hidden="true">S</span><span>studyspace</span></div>
+      <h1 id="authHeading">Welcome back</h1>
+      <p id="authDescription">Sign in to open your personal study space.</p>
+      <form class="auth-form" id="authForm">
+        <div class="field" id="usernameField" hidden><label for="authUsername">Username</label><input id="authUsername" name="username" autocomplete="username" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]+" placeholder="e.g. ada_studies" /></div>
+        <div class="field"><label for="authEmail">Email</label><input id="authEmail" name="email" type="email" autocomplete="email" required placeholder="you@example.com" /></div>
+        <div class="field"><label for="authPassword">Password</label><input id="authPassword" name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="At least 8 characters" /></div>
+        <button class="primary" id="authSubmit" type="submit" style="width:100%;margin-top:7px">Sign in</button>
+      </form>
+      <button class="auth-switch" id="authSwitch" type="button">Create an account</button>
+      <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
+      <div class="auth-setup" id="authSetup">Authentication setup is not connected yet. Add your Supabase project URL and public anon key to <strong>supabase-config.js</strong>, then apply the included database setup script.</div>
+    </div>
+  </section>
   <div class="shell">
     <aside class="sidebar" aria-label="Main navigation">
       <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect class="mark-sheet-back" x="3.5" y="11.5" width="21" height="25" rx="3" stroke-width="1.8"/><rect class="mark-sheet" x="8" y="7.5" width="21" height="25" rx="3" stroke-width="1.8"/><rect class="mark-sheet" x="12.5" y="3.5" width="21" height="25" rx="3" stroke-width="1.8"/><path class="mark-check" d="m16.5 10.5 3.2 3.2 6-6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path class="mark-lines" d="M16.5 19h12M16.5 23h8" stroke-width="1.7" stroke-linecap="round"/></svg></span><span class="brand-wordmark"><span>study</span><span>space</span></span></div>
@@ -74,7 +109,7 @@
         <button data-screen="calendar"><span class="nav-icon">◷</span>Study calendar</button>
       </nav>
       <div class="side-subjects"><p class="nav-label">Your subjects</p><div id="sidebarSubjects"></div></div>
-      <div class="sidebar-bottom"><div class="user-row"><span class="avatar">S</span><span>Student account</span></div><div style="padding:11px 0 0 44px">Free study space</div></div>
+      <div class="sidebar-bottom"><div class="user-row"><span class="avatar" id="accountAvatar">S</span><span id="accountLabel">Student account</span></div><div style="padding:11px 0 0 44px">Free study space</div><button class="account-signout" id="signOutButton" type="button">Sign out</button></div>
     </aside>
     <main class="main">
       <header class="topbar"><span class="crumb" id="breadcrumb">Workspace&nbsp; / &nbsp;Overview</span><div class="top-actions"><button class="secondary" id="appearanceButton" aria-label="Choose appearance">◒&nbsp; Appearance</button><span class="avatar">S</span></div></header>
@@ -107,6 +142,8 @@
   <nav class="mobile-nav" aria-label="Mobile navigation"><button class="active" data-screen="dashboard"><span>⌂</span>Home</button><button data-screen="subjects"><span>▦</span>Subjects</button><button data-screen="calendar"><span>◷</span>Calendar</button></nav>
   <div class="modal-backdrop" id="modalBackdrop" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle"></h2><p id="modalSubtitle"></p></div><button class="close" id="closeModal" aria-label="Close dialog">×</button></div><div id="modalBody"></div><div class="modal-actions" id="modalActions"></div></section></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
   <script>
     const storeKey='studyspace-prototype-v1';
     const testStoreKey='studyspace-tests-v1';
@@ -116,14 +153,16 @@
       {id:'stats',name:'Statistics',exam:'',topics:[],notes:[],past:[],tests:[]}
     ];
     let subjects=JSON.parse(localStorage.getItem(storeKey)||'null')||starter;
+    let authUser=null;
     let currentId=null,currentTab='topics',pendingUpload=[],uploadKind='notes',pendingTest=null,practiceKinds=[];
     const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-    function save(){localStorage.setItem(storeKey,JSON.stringify(subjects));renderDashboard();renderSidebar()}
+    function accountKey(key){return authUser?`${key}:${authUser.id}`:key}
+    function save(){localStorage.setItem(accountKey(storeKey),JSON.stringify(subjects));renderDashboard();renderSidebar();if(authUser)queueAccountSync()}
     function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
     function fmtDate(d){if(!d)return 'Date not set';return new Date(d+'T12:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
-    function syncSubjectTests(subject){if(!subject)return;subject.tests=subject.tests||[];const saved=JSON.parse(localStorage.getItem(testStoreKey)||'{}')[subject.id]||[];for(const test of saved)if(!subject.tests.some(item=>item.name===test.name&&item.date===test.date))subject.tests.push(test);return subject.tests}
+    function syncSubjectTests(subject){if(!subject)return;subject.tests=subject.tests||[];const saved=JSON.parse(localStorage.getItem(accountKey(testStoreKey))||'{}')[subject.id]||[];for(const test of saved)if(!subject.tests.some(item=>item.name===test.name&&item.date===test.date))subject.tests.push(test);return subject.tests}
     function activeSubject(){const subject=subjects.find(s=>s.id===currentId);if(!subject)return;syncSubjectTests(subject);return subject}
-    function persistStudyView(name){if(['dashboard','subjects','calendar','subject'].includes(name))localStorage.setItem('studyspace-view-v1',JSON.stringify({screen:name,subjectId:currentId,tab:currentTab}))}
+    function persistStudyView(name){if(['dashboard','subjects','calendar','subject'].includes(name))localStorage.setItem(accountKey('studyspace-view-v1'),JSON.stringify({screen:name,subjectId:currentId,tab:currentTab}))}
     function showScreen(name){$$('.screen').forEach(x=>x.classList.remove('active'));$('#'+name+'Screen').classList.add('active');$('#breadcrumb').innerHTML=name==='dashboard'?'Workspace&nbsp; / &nbsp;Overview':name==='subject'?'Workspace&nbsp; / &nbsp;Subject':name==='summary'?'Workspace&nbsp; / &nbsp;Topic summary':'Workspace&nbsp; / &nbsp;Practice';persistStudyView(name);window.scrollTo(0,0)}
     function renderSidebar(){$('#sidebarSubjects').innerHTML=subjects.map(s=>`<button class="subject-link" data-open="${esc(s.id)}">${esc(s.name)}</button>`).join('')||'<div style="padding:8px 12px;color:#89938b;font-size:13px">No subjects yet</div>';$$('[data-open]').forEach(b=>b.onclick=()=>openSubject(b.dataset.open))}
     function renderDashboard(){let n=subjects.length;$('#subjectCount').textContent=`${n} ${n===1?'subject':'subjects'}`;let topicTotal=subjects.reduce((a,s)=>a+s.topics.length,0);$('#topicCount').textContent=topicTotal;$('#subjectGrid').innerHTML=subjects.map(s=>`<article class="subject-card" data-open="${esc(s.id)}"><div class="card-top"><span class="subject-badge">${esc(s.name.slice(0,1).toUpperCase())}</span><span class="dots">•••</span></div><h3>${esc(s.name)}</h3><p>${s.topics.length} ${s.topics.length===1?'topic':'topics'} · Exam ${esc(fmtDate(s.exam))}</p><div class="progress"><span style="width:${s.topics.length?Math.round(s.topics.filter(t=>t.done).length/s.topics.length*100):0}%"></span></div><div class="card-bottom"><span>${s.topics.filter(t=>t.done).length} of ${s.topics.length} topics complete</span><span>Open →</span></div></article>`).join('')||`<div class="empty" style="grid-column:1/-1"><div style="font-size:27px">＋</div><h3>Your first subject starts here</h3><p>Add a subject and its exam date. You can upload notes and create separate test plans whenever you need them.</p><button class="primary" onclick="openSubjectModal()">Add a subject</button></div>`;let all=subjects.flatMap(s=>[...s.tests.map(t=>({...t,subject:s.name,type:'Test'})),...(s.exam?[{name:`${s.name} exam`,date:s.exam,subject:s.name,type:'Exam'}]:[])]).filter(x=>x.date).sort((a,b)=>a.date.localeCompare(b.date));$('#nextAssessment').textContent=all[0]?`${all[0].subject} · ${fmtDate(all[0].date)}`:'Add your first subject';$('#assessmentList').innerHTML=all.slice(0,4).map(a=>{let d=new Date(a.date+'T12:00:00');return `<div class="assessment-row"><div class="calendar-date"><b>${d.getDate()}</b><small>${d.toLocaleDateString(undefined,{month:'short'})}</small></div><div class="assessment-info"><strong>${esc(a.name)}</strong><small>${esc(a.subject)}</small></div><span class="tag ${a.type==='Test'?'soon':''}">${a.type}</span></div>`}).join('')||'<div class="empty"><p>No assessments yet. Add a subject or a test to start planning.</p></div>';$$('[data-open]').forEach(b=>b.onclick=()=>openSubject(b.dataset.open))}
@@ -132,7 +171,7 @@
     function openModal(title,subtitle,body,actions){$('#modalTitle').textContent=title;$('#modalSubtitle').textContent=subtitle;$('#modalBody').innerHTML=body;$('#modalActions').innerHTML=actions;$('#modalBackdrop').classList.add('show');$('#modalBackdrop').setAttribute('aria-hidden','false');setTimeout(()=>$('#modalBody input:not([type=checkbox])')?.focus(),30)}function closeModal(){$('#modalBackdrop').classList.remove('show');$('#modalBackdrop').setAttribute('aria-hidden','true')}
     function openSubjectModal(){openModal('Add a subject','Set up your course. You can add its notes now or later.',`<form id="subjectForm"><div class="field"><label for="newSubjectName">Subject name</label><input id="newSubjectName" name="name" required placeholder="e.g. Human Physiology" /></div><div class="field"><label for="newExamDate">General exam date</label><input id="newExamDate" name="exam" type="date" /><small>If you don’t know the date yet, you can add it later.</small></div></form>`,`<button class="secondary" data-cancel>Cancel</button><button class="primary" id="saveSubject">Create subject</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$('#saveSubject').onclick=()=>{let f=$('#subjectForm');if(!f.reportValidity())return;let fd=new FormData(f);let s={id:crypto.randomUUID(),name:fd.get('name').trim(),exam:fd.get('exam'),topics:[],notes:[],past:[],tests:[]};subjects.unshift(s);save();closeModal();openSubject(s.id);toast('Subject created. Add notes to get started.')};}
     function openSubjectSettings(){const subject=activeSubject();if(!subject)return;openModal('Subject settings','Update the subject name or general exam date.',`<form id="subjectSettingsForm"><div class="field"><label for="editSubjectName">Subject name</label><input id="editSubjectName" required value="${esc(subject.name)}" /></div><div class="field"><label for="editExamDate">General exam date</label><input id="editExamDate" type="date" value="${esc(subject.exam||'')}" /><small>You can leave this blank if the exam date hasn’t been announced.</small></div></form>`,`<button class="secondary" data-cancel>Cancel</button><button class="secondary" id="deleteSubjectBtn" style="color:#c2413b">Delete subject</button><button class="primary" id="saveSubjectSettings">Save changes</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$('#saveSubjectSettings').onclick=()=>{const form=$('#subjectSettingsForm');if(!form.reportValidity())return;subject.name=$('#editSubjectName').value.trim();subject.exam=$('#editExamDate').value;save();closeModal();renderSubject();toast('Subject details updated.')};$('#deleteSubjectBtn').onclick=()=>openDeleteSubjectConfirmation(subject)}
-    function openDeleteSubjectConfirmation(subject){openModal(`Delete ${subject.name}?`,'This removes the subject and its study data from this browser.',`<div class="note">This will remove its topics, notes list, summaries, tests, and past-question list. This action cannot be undone.</div>`,`<button class="secondary" data-cancel>Keep subject</button><button class="primary" id="confirmDeleteSubject" style="background:#b42318;border-color:#b42318">Delete subject</button>`);$('#modalActions [data-cancel]').onclick=()=>openSubjectSettings();$('#confirmDeleteSubject').onclick=()=>{subjects=subjects.filter(item=>item.id!==subject.id);const records=JSON.parse(localStorage.getItem(testStoreKey)||'{}');delete records[subject.id];localStorage.setItem(testStoreKey,JSON.stringify(records));currentId=null;currentTab='topics';save();closeModal();showScreen('dashboard');toast('Subject deleted.') }}
+    function openDeleteSubjectConfirmation(subject){openModal(`Delete ${subject.name}?`,'This removes the subject and its study data from this browser.',`<div class="note">This will remove its topics, notes list, summaries, tests, and past-question list. This action cannot be undone.</div>`,`<button class="secondary" data-cancel>Keep subject</button><button class="primary" id="confirmDeleteSubject" style="background:#b42318;border-color:#b42318">Delete subject</button>`);$('#modalActions [data-cancel]').onclick=()=>openSubjectSettings();$('#confirmDeleteSubject').onclick=()=>{subjects=subjects.filter(item=>item.id!==subject.id);const records=JSON.parse(localStorage.getItem(accountKey(testStoreKey))||'{}');delete records[subject.id];localStorage.setItem(accountKey(testStoreKey),JSON.stringify(records));currentId=null;currentTab='topics';save();closeModal();showScreen('dashboard');toast('Subject deleted.') }}
     function openUploadModal(kind){uploadKind=kind;let past=kind==='past';openModal(past?'Add past questions':'Upload your notes',past?'Keep past questions in this subject for a separate practice mode.':'Upload one or more files. The app will suggest topics for you to review.',`<div class="upload-zone"><div style="font-size:25px;color:var(--green)">${past?'▤':'↥'}</div><div class="field" style="margin:9px 0"><label for="filePicker">Choose files</label><input id="filePicker" type="file" multiple accept=".pdf,.ppt,.pptx,.doc,.docx,.jpg,.jpeg,.png,.webp" /></div><p>PDF, PowerPoint, Word, JPG, PNG and WebP</p></div><div id="selectedFiles" class="file-list" style="margin-top:12px"></div><div class="note">Prototype note: this preview can’t read file contents yet. Topic suggestions below are placeholders; a document-reading service is needed for real extraction.</div>`,`<button class="secondary" data-cancel>Cancel</button><button class="primary" id="continueUpload">${past?'Add files':'Review suggested topics'}</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$('#filePicker').onchange=e=>{$('#selectedFiles').innerHTML=[...e.target.files].map(f=>`<div class="file-item">▤ &nbsp;${esc(f.name)} <span style="color:#89938b">(${Math.max(1,Math.round(f.size/1024))} KB)</span></div>`).join('')};$('#continueUpload').onclick=()=>{let files=[...$('#filePicker').files];if(!files.length){toast('Choose at least one file first.');return}pendingUpload=files;let s=activeSubject();if(past){s.past.push(...files.map(f=>f.name));save();closeModal();renderSubject();toast('Past questions added to this subject.');return}closeModal();openTopicReview(files)}}
     function guessedTopic(file){return file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\b(lecture|notes|slides|week|chapter|final|updated)\b/gi,'').replace(/\s+/g,' ').trim()||'Suggested topic'}
     function openTopicReview(files){let names=[...new Set(files.map(guessedTopic))];openModal('Review suggested topics','Confirm or correct the topics before they’re added to your subject.',`<div class="topic-edit-list">${names.map((n,i)=>`<div class="topic-edit"><input aria-label="Suggested topic ${i+1}" value="${esc(n)}" /><button type="button" data-remove-topic="${i}" aria-label="Remove topic suggestion">×</button></div>`).join('')}</div><div class="note">You can rename a suggestion or remove it if it doesn’t match the notes. Topics are added only after you confirm.</div>`,`<button class="secondary" data-cancel>Cancel</button><button class="primary" id="confirmTopics">Confirm topics</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$$('[data-remove-topic]').forEach(b=>b.onclick=()=>b.parentElement.remove());$('#confirmTopics').onclick=()=>{let s=activeSubject();let topics=$$('.topic-edit input').map(i=>i.value.trim()).filter(Boolean);s.notes.push(...files.map(f=>f.name));for(const name of topics)if(!s.topics.some(t=>t.name.toLowerCase()===name.toLowerCase()))s.topics.push({name,done:false});save();closeModal();renderSubject();toast('Notes added and topics confirmed. Summaries are ready in this prototype.')}}
@@ -142,8 +181,8 @@
     function openPractice(topicIndex){let s=activeSubject(),topic=topicIndex===null?null:s.topics[topicIndex];practiceKinds=[];openModal('Choose a practice activity',topic?`For ${topic.name}. Choose one, two, or all three.`:'For this subject. Choose one, two, or all three.',`<div class="choice-grid">${[['objective','Objective questions','Multiple choice with answers and explanations.'],['theory','Theory questions','Written questions with sample answers.'],['flashcards','Flashcards','Prompts and answers for active recall.']].map(([v,l,d])=>`<label class="choice"><input type="checkbox" name="practice" value="${v}"><span><strong>${l}</strong><small>${d}</small></span></label>`).join('')}</div><div class="note">Past-question practice is a separate activity and uses past questions uploaded to this subject.</div>`,`<button class="secondary" data-cancel>Cancel</button><button class="primary" id="makePractice">Start practice</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$('#makePractice').onclick=()=>{practiceKinds=$$('input[name=practice]:checked').map(x=>x.value);if(!practiceKinds.length){toast('Choose at least one practice activity.');return}closeModal();renderPractice(topic,practiceKinds,false)}}
     function renderPractice(topic,kinds,past){let s=activeSubject(),title=past?'Past-question practice':topic?`Practise: ${topic.name}`:`${s.name} practice`;let parts=kinds.map(k=>{let cap=k==='objective'?'Objective questions':k==='theory'?'Theory questions':'Flashcards';return `<section><h2 style="font-size:18px;margin:18px 0 7px">${cap}</h2>${(k==='objective'?[`Which statement best describes ${topic?.name||s.name}?`,`Which idea is most important to remember?`]:k==='theory'?[`Explain the main ideas in ${topic?.name||s.name} in your own words.`]:[`What is one key idea from ${topic?.name||s.name}?`,`How would you explain it simply?`]).map((q,i)=>`<div class="question"><p><strong>${i+1}. ${esc(q)}</strong></p>${k==='objective'?'<label><input type="radio" name="q'+k+i+'"> Option A</label> &nbsp; <label><input type="radio" name="q'+k+i+'"> Option B</label> &nbsp; <label><input type="radio" name="q'+k+i+'"> Option C</label>':''}<button class="quiet" data-answer="${k+i}">${k==='flashcards'?'Flip card':'Show answer'}</button><div class="answer" id="answer-${k+i}">Sample answer and explanation will be generated from the uploaded course notes. Answers should be shown after the student attempts the question.</div></div>`).join('')}</section>`}).join('');$('#practiceContent').innerHTML=`<div class="eyebrow">${past?'Past questions':esc(s.name)}</div><h1 style="font-size:28px;letter-spacing:-.04em;margin:4px 0">${esc(title)}</h1><p style="color:var(--muted);margin:0">A sample practice screen. Real question generation will connect to the uploaded materials.</p>${parts}<button class="secondary" id="backToTopics">Back to topics</button>`;$$('[data-answer]').forEach(b=>b.onclick=()=>{$('#answer-'+b.dataset.answer).classList.toggle('show');b.textContent=$('#answer-'+b.dataset.answer).classList.contains('show')?'Hide answer':'Show answer'});$('#backToTopics').onclick=()=>{showScreen('subject');renderSubject()};showScreen('practice')}
     function toast(msg){let el=$('#toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2600)}
-    document.addEventListener('submit',event=>{if(event.target.id!=='testForm')return;const subject=subjects.find(item=>item.id===currentId);if(!subject)return;const test={name:$('#testName').value.trim(),date:$('#testDate').value,topics:$$('#testForm input[type=checkbox]:checked').map(input=>input.value)};const records=JSON.parse(localStorage.getItem(testStoreKey)||'{}');records[subject.id]=records[subject.id]||[];const index=records[subject.id].findIndex(item=>item.name===test.name&&item.date===test.date);if(index<0)records[subject.id].push(test);else records[subject.id][index]=test;localStorage.setItem(testStoreKey,JSON.stringify(records))},true);
-    document.addEventListener('click',event=>{const saveButton=event.target.closest('#saveTest');if(!saveButton)return;event.preventDefault();document.getElementById('testForm')?.requestSubmit();setTimeout(()=>{const stored=JSON.parse(localStorage.getItem(storeKey)||'null');if(stored)subjects=stored;currentTab='tests';renderSubject();showScreen('subject')},0)},true);
+    document.addEventListener('submit',event=>{if(event.target.id!=='testForm')return;const subject=subjects.find(item=>item.id===currentId);if(!subject)return;const test={name:$('#testName').value.trim(),date:$('#testDate').value,topics:$$('#testForm input[type=checkbox]:checked').map(input=>input.value)};const records=JSON.parse(localStorage.getItem(accountKey(testStoreKey))||'{}');records[subject.id]=records[subject.id]||[];const index=records[subject.id].findIndex(item=>item.name===test.name&&item.date===test.date);if(index<0)records[subject.id].push(test);else records[subject.id][index]=test;localStorage.setItem(accountKey(testStoreKey),JSON.stringify(records))},true);
+    document.addEventListener('click',event=>{const saveButton=event.target.closest('#saveTest');if(!saveButton)return;event.preventDefault();document.getElementById('testForm')?.requestSubmit();setTimeout(()=>{const stored=JSON.parse(localStorage.getItem(accountKey(storeKey))||'null');if(stored)subjects=stored;currentTab='tests';renderSubject();showScreen('subject')},0)},true);
     $('#newSubjectBtn').onclick=openSubjectModal;$('#subjectSettingsBtn').onclick=openSubjectSettings;$('#closeModal').onclick=closeModal;$('#modalBackdrop').onclick=e=>{if(e.target.id==='modalBackdrop')closeModal()};$('#backDashboard').onclick=()=>showScreen('dashboard');$('#backSubject').onclick=()=>{showScreen('subject');renderSubject()};$('#backPracticeSubject').onclick=()=>{showScreen('subject');renderSubject()};$('#downloadPdf').onclick=()=>window.print();$('#uploadNotesBtn').onclick=()=>openUploadModal('notes');$('#startStudying').onclick=()=>subjects.length?openSubject(subjects.find(s=>s.topics.length)?.id||subjects[0].id):openSubjectModal();$('#addTestFromDash').onclick=()=>subjects.length?openSubject(subjects[0].id):toast('Create a subject first.');$$('[data-screen="dashboard"]').forEach(b=>b.onclick=()=>showScreen('dashboard'));renderDashboard();renderSidebar();
   </script>
   <script src="app-enhancements.js"></script>
@@ -159,6 +198,97 @@
         showStudyPage(savedStudyView.screen);
       }
     }
+  </script>
+  <script>
+    let studyspaceClient=null;
+    let accountHydrated=false;
+    let accountLoadingId=null;
+    let accountSyncTimer=null;
+    let authMode='signin';
+
+    function authMessage(message,isError=false){const el=document.getElementById('authMessage');el.textContent=message;el.classList.toggle('error',isError)}
+    function setAuthMode(mode){
+      authMode=mode;
+      const signup=mode==='signup';
+      document.getElementById('authHeading').textContent=signup?'Create your account':'Welcome back';
+      document.getElementById('authDescription').textContent=signup?'Choose a username and create your personal study space.':'Sign in to open your personal study space.';
+      document.getElementById('usernameField').hidden=!signup;
+      document.getElementById('authUsername').required=signup;
+      document.getElementById('authPassword').autocomplete=signup?'new-password':'current-password';
+      document.getElementById('authSubmit').textContent=signup?'Create account':'Sign in';
+      document.getElementById('authSwitch').textContent=signup?'Already have an account? Sign in':'Create an account';
+      authMessage('');
+    }
+    function leaveAccount(){
+      authUser=null;accountHydrated=false;subjects=[];currentId=null;currentTab='topics';
+      document.body.classList.add('auth-required');
+      document.getElementById('accountLabel').textContent='Student account';
+      document.getElementById('accountAvatar').textContent='S';
+      setAuthMode('signin');
+    }
+    async function enterAccount(user){
+      if(accountHydrated&&authUser?.id===user.id)return;
+      if(accountLoadingId===user.id)return;
+      accountLoadingId=user.id;
+      authUser=user;accountHydrated=false;
+      authMessage('Loading your study space…');
+      const {data,error}=await studyspaceClient.from('student_data').select('payload').eq('user_id',user.id).maybeSingle();
+      if(error){authUser=null;accountLoadingId=null;authMessage('Could not load your account data. Check that the database setup has been applied, then try again.',true);return}
+      const payload=data?.payload||{};
+      subjects=Array.isArray(payload.subjects)?payload.subjects:[];
+      localStorage.setItem(accountKey(testStoreKey),JSON.stringify(payload.tests||{}));
+      localStorage.setItem(accountKey(storeKey),JSON.stringify(subjects));
+      const profile=await studyspaceClient.from('profiles').select('username').eq('id',user.id).maybeSingle();
+      const username=profile.data?.username||user.user_metadata?.username||'Student';
+      document.getElementById('accountLabel').textContent=username;
+      document.getElementById('accountAvatar').textContent=username.slice(0,1).toUpperCase();
+      accountHydrated=true;accountLoadingId=null;document.body.classList.remove('auth-required');authMessage('');
+      renderDashboard();renderSidebar();showStudyPage('dashboard');
+    }
+    function queueAccountSync(){
+      if(!studyspaceClient||!authUser||!accountHydrated)return;
+      clearTimeout(accountSyncTimer);
+      accountSyncTimer=setTimeout(async()=>{
+        const tests=JSON.parse(localStorage.getItem(accountKey(testStoreKey))||'{}');
+        const {error}=await studyspaceClient.from('student_data').upsert({user_id:authUser.id,payload:{subjects,tests},updated_at:new Date().toISOString()},{onConflict:'user_id'});
+        if(error)toast('Your changes could not sync. Check your connection and try again.');
+      },350);
+    }
+    async function startAuthentication(){
+      const setup=document.getElementById('authSetup');
+      document.getElementById('authSwitch').onclick=()=>setAuthMode(authMode==='signin'?'signup':'signin');
+      const config=window.STUDYSPACE_SUPABASE||{};
+      if(!config.url||!config.anonKey||!window.supabase?.createClient){authMessage('Connect Supabase to enable account sign-in.');return}
+      setup.hidden=true;
+      studyspaceClient=window.supabase.createClient(config.url,config.anonKey);
+      document.getElementById('authForm').addEventListener('submit',async event=>{
+        event.preventDefault();
+        const form=event.currentTarget; if(!form.reportValidity())return;
+        const email=document.getElementById('authEmail').value.trim();
+        const password=document.getElementById('authPassword').value;
+        authMessage(authMode==='signup'?'Creating your account…':'Signing you in…');
+        let result;
+        if(authMode==='signup'){
+          const username=document.getElementById('authUsername').value.trim();
+          result=await studyspaceClient.auth.signUp({email,password,options:{data:{username},emailRedirectTo:location.href}});
+          if(!result.error&&!result.data.session){authMessage('Check your email to confirm your account, then return here to sign in.');return}
+        }else result=await studyspaceClient.auth.signInWithPassword({email,password});
+        if(result.error){
+          const usernameConflict=/profiles_username_lower_unique|duplicate key/i.test(result.error.message);
+          authMessage(usernameConflict?'That username is already taken. Choose another one.':result.error.message,true);return;
+        }
+        if(result.data.user)await enterAccount(result.data.user);
+      });
+      document.getElementById('signOutButton').onclick=async()=>{await studyspaceClient.auth.signOut();leaveAccount()};
+      studyspaceClient.auth.onAuthStateChange((event,session)=>{
+        setTimeout(()=>{if(session?.user)enterAccount(session.user);else if(event==='SIGNED_OUT')leaveAccount()},0);
+      });
+      const {data,error}=await studyspaceClient.auth.getSession();
+      if(error){authMessage('Could not check your sign-in session. Please refresh and try again.',true);return}
+      if(data.session?.user)await enterAccount(data.session.user);
+    }
+    setAuthMode('signin');
+    startAuthentication();
   </script>
 </body>
 </html>
