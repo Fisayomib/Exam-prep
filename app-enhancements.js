@@ -88,3 +88,42 @@ document.addEventListener('click',event=>{
 
 document.getElementById('addSubjectFromPage').addEventListener('click',openSubjectModal);
 
+const studyPalettes=[
+  {id:'dusk',name:'Dusk',mood:'Calm · Warm · Sophisticated',colors:['#1A1B2E','#42426F','#6D5BA6','#F08A8A','#FFD6C9']},
+  {id:'sage',name:'Sage',mood:'Fresh · Natural · Balanced',colors:['#2E4D3D','#527F5B','#A3C9A8','#DCEAD9','#F7F7F2']},
+  {id:'ocean',name:'Ocean',mood:'Cool · Clean · Refreshing',colors:['#0D1B2A','#1B4965','#29ADB2','#A8DADC','#E6F4F1']},
+  {id:'sunset',name:'Sunset',mood:'Vibrant · Energetic · Friendly',colors:['#E94F37','#F9844A','#F9C74F','#FDD9B5','#FFF2E7']},
+  {id:'lavender',name:'Lavender',mood:'Soft · Dreamy · Elegant',colors:['#5E4B8B','#7D6CC4','#B9A7E0','#E7D6F7','#F6F2FB']},
+  {id:'mustard',name:'Mustard',mood:'Bold · Modern · Playful',colors:['#2B2B2B','#D4A017','#F0C94C','#F7E7B5','#FFFDF5']},
+  {id:'teal-gray',name:'Teal / Gray',mood:'Minimal · Calm · Professional',colors:['#263238','#455A64','#80CBC4','#CFD8DC','#ECEFF1']},
+  {id:'berry',name:'Berry',mood:'Rich · Bold · Luxurious',colors:['#6B0F3C','#9D174D','#E3356A','#F7A1B3','#FFE6EC']},
+  {id:'arctic',name:'Arctic',mood:'Crisp · Cool · Modern',colors:['#102A43','#1E88E5','#64B5F6','#BBDEFB','#E3F2FD']},
+  {id:'neutral',name:'Neutral',mood:'Timeless · Clean · Versatile',colors:['#333333','#757575','#BDBDBD','#EEEEEE','#FAFAFA']}
+];
+
+function applyStudyPalette(id,saveChoice=true){
+  const palette=studyPalettes.find(item=>item.id===id)||studyPalettes.find(item=>item.id==='sage');
+  document.documentElement.dataset.theme=palette.id;
+  if(saveChoice)localStorage.setItem('studyspace-theme-v1',palette.id);
+  document.querySelectorAll('[data-theme-choice]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.themeChoice===palette.id)));
+}
+
+function openAppearancePicker(){
+  const cards=studyPalettes.map(palette=>`<button type="button" aria-pressed="${document.documentElement.dataset.theme===palette.id}" class="palette-option" data-theme-choice="${palette.id}"><span class="palette-name">${palette.name}<span class="palette-check">${document.documentElement.dataset.theme===palette.id?'✓ Selected':''}</span></span><span class="palette-swatches">${palette.colors.map(color=>`<i style="background:${color}" title="${color}"></i>`).join('')}</span><small style="display:block;margin-top:7px;color:var(--muted)">${palette.mood}</small></button>`).join('');
+  openModal('Choose an appearance','Preview a color palette for your study space. Your choice is saved in this browser.',`<p class="appearance-description">Pick the colors that feel comfortable for your study sessions. You can change this any time.</p><div class="appearance-grid" role="radiogroup" aria-label="Color palettes">${cards}</div>`,`<button class="primary" data-cancel>Done</button>`);
+  document.querySelector('#modalActions [data-cancel]').onclick=closeModal;
+}
+
+applyStudyPalette(localStorage.getItem('studyspace-theme-v1')||'sage',false);
+document.getElementById('appearanceButton').addEventListener('click',openAppearancePicker);
+document.addEventListener('click',event=>{
+  const choice=event.target.closest('[data-theme-choice]');
+  if(!choice)return;
+  applyStudyPalette(choice.dataset.themeChoice);
+  document.querySelectorAll('[data-theme-choice]').forEach(button=>{
+    const selected=button.dataset.themeChoice===choice.dataset.themeChoice;
+    button.setAttribute('aria-pressed',String(selected));
+    button.querySelector('.palette-check').textContent=selected?'✓ Selected':'';
+  });
+});
+
