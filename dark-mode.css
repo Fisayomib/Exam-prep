@@ -32,6 +32,10 @@
 :root[data-mode="dark"] .primary{color:#fff}
 :root[data-mode="dark"] .toast{background:#080B09;color:#fff}
 :root[data-mode="dark"] :focus-visible{outline-color:var(--lime)}
+:root[data-mode="dark"] .eyebrow,:root[data-mode="dark"] .streak-number,:root[data-mode="dark"] .quiet,:root[data-mode="dark"] .topic-actions button,:root[data-mode="dark"] .calendar-day{color:var(--lime)}
+:root[data-mode="dark"] .tabs button.active{color:var(--lime);border-color:var(--lime)}
+:root[data-mode="dark"] .topic-check.done{background:var(--lime);border-color:var(--lime);color:var(--green-dark)}
+:root[data-mode="dark"] .nav-label,:root[data-mode="dark"] .file-list{color:var(--muted)}
 .mode-switch{display:flex;gap:5px;padding:4px;border:1px solid var(--line);border-radius:12px;background:var(--canvas);width:max-content;margin:0 0 15px}
 .mode-switch button{border:0;border-radius:8px;padding:8px 13px;background:transparent;color:var(--muted);font-weight:650}
 .mode-switch button[aria-pressed="true"]{background:var(--green);color:#fff}
