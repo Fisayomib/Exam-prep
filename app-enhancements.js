@@ -108,13 +108,22 @@ function applyStudyPalette(id,saveChoice=true){
   document.querySelectorAll('[data-theme-choice]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.themeChoice===palette.id)));
 }
 
+function applyColorMode(mode,saveChoice=true){
+  const normalized=mode==='dark'?'dark':'light';
+  document.documentElement.dataset.mode=normalized;
+  if(saveChoice)localStorage.setItem('studyspace-mode-v1',normalized);
+  document.querySelectorAll('[data-mode-choice]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.modeChoice===normalized)));
+}
+
 function openAppearancePicker(){
   const cards=studyPalettes.map(palette=>`<button type="button" aria-pressed="${document.documentElement.dataset.theme===palette.id}" class="palette-option" data-theme-choice="${palette.id}"><span class="palette-name">${palette.name}<span class="palette-check">${document.documentElement.dataset.theme===palette.id?'✓ Selected':''}</span></span><span class="palette-swatches">${palette.colors.map(color=>`<i style="background:${color}" title="${color}"></i>`).join('')}</span><small style="display:block;margin-top:7px;color:var(--muted)">${palette.mood}</small></button>`).join('');
-  openModal('Choose an appearance','Preview a color palette for your study space. Your choice is saved in this browser.',`<p class="appearance-description">Pick the colors that feel comfortable for your study sessions. You can change this any time.</p><div class="appearance-grid" role="radiogroup" aria-label="Color palettes">${cards}</div>`,`<button class="primary" data-cancel>Done</button>`);
+  const mode=document.documentElement.dataset.mode||'light';
+  openModal('Choose an appearance','Preview a color palette and choose light or dark mode. Your choices are saved in this browser.',`<p class="appearance-description">Color mode</p><div class="mode-switch" role="group" aria-label="Color mode"><button type="button" data-mode-choice="light" aria-pressed="${mode==='light'}">Light</button><button type="button" data-mode-choice="dark" aria-pressed="${mode==='dark'}">Dark</button></div><p class="appearance-description">Color palette</p><div class="appearance-grid" aria-label="Color palettes">${cards}</div>`,`<button class="primary" data-cancel>Done</button>`);
   document.querySelector('#modalActions [data-cancel]').onclick=closeModal;
 }
 
 applyStudyPalette(localStorage.getItem('studyspace-theme-v1')||'sage',false);
+applyColorMode(localStorage.getItem('studyspace-mode-v1')||'light',false);
 document.getElementById('appearanceButton').addEventListener('click',openAppearancePicker);
 document.addEventListener('click',event=>{
   const choice=event.target.closest('[data-theme-choice]');
@@ -125,5 +134,9 @@ document.addEventListener('click',event=>{
     button.setAttribute('aria-pressed',String(selected));
     button.querySelector('.palette-check').textContent=selected?'✓ Selected':'';
   });
+});
+document.addEventListener('click',event=>{
+  const modeButton=event.target.closest('[data-mode-choice]');
+  if(modeButton)applyColorMode(modeButton.dataset.modeChoice);
 });
 
