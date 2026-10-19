@@ -32,6 +32,23 @@
     @media(max-width:480px){.appearance-grid{grid-template-columns:1fr}.top-actions #appearanceButton{font-size:12px;padding:8px 9px}}
     @media(prefers-reduced-motion:reduce){.flashcard-rotator{transition:none}}
   </style>
+  <style>
+    :root[data-theme="dusk"]{--sidebar-bg:#FBF4F2;--sidebar-active:#FFD6C9}
+    :root[data-theme="sage"]{--sidebar-bg:#EFF4EE;--sidebar-active:#DCEAD9}
+    :root[data-theme="ocean"]{--sidebar-bg:#ECF6F5;--sidebar-active:#C5E8E7}
+    :root[data-theme="sunset"]{--sidebar-bg:#FFF5EC;--sidebar-active:#FDD9B5}
+    :root[data-theme="lavender"]{--sidebar-bg:#F6F2FB;--sidebar-active:#E7D6F7}
+    :root[data-theme="mustard"]{--sidebar-bg:#F8F5EB;--sidebar-active:#F7E7B5}
+    :root[data-theme="teal-gray"]{--sidebar-bg:#F0F3F4;--sidebar-active:#CFD8DC}
+    :root[data-theme="berry"]{--sidebar-bg:#FFF5F7;--sidebar-active:#FFE6EC}
+    :root[data-theme="arctic"]{--sidebar-bg:#F1F7FC;--sidebar-active:#BBDEFB}
+    :root[data-theme="neutral"]{--sidebar-bg:#F4F4F4;--sidebar-active:#EEEEEE}
+    .sidebar{background:var(--sidebar-bg)}
+    .nav button.active,.nav button:hover,.subject-link:hover{background:var(--sidebar-active)}
+    .avatar{background:var(--sidebar-active)}
+    .sidebar-bottom{border-top-color:var(--line)}
+    .mobile-nav{background:var(--paper)}
+  </style>
 </head>
 <body>
   <div class="shell">
