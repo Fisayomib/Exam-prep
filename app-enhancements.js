@@ -25,6 +25,7 @@ function showStudyPage(name){
   document.querySelectorAll('.nav [data-screen],.mobile-nav [data-screen]').forEach(el=>el.classList.toggle('active',el.dataset.screen===name));
   if(name==='subjects')renderSubjectsPage();
   if(name==='calendar')renderCalendarPage();
+  if(['dashboard','subjects','calendar','subject'].includes(name))persistStudyView(name);
   window.scrollTo(0,0);
 }
 
