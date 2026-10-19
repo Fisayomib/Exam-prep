@@ -65,6 +65,26 @@
   <style>
     body.auth-required .shell,body.auth-required .mobile-nav{display:none}
     .auth-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--canvas);color:var(--ink)}
+    .auth-gate{overflow:hidden;isolation:isolate}
+    .auth-card{position:relative;z-index:1}
+    .auth-scene{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;color:var(--green)}
+    .auth-orb{position:absolute;display:block;border-radius:50%;background:var(--mint);opacity:.35;filter:blur(1px);animation:orb-breathe 9s ease-in-out infinite}
+    .auth-orb-one{width:clamp(180px,24vw,340px);height:clamp(180px,24vw,340px);left:8%;top:6%}
+    .auth-orb-two{width:clamp(150px,19vw,270px);height:clamp(150px,19vw,270px);right:8%;bottom:3%;opacity:.24;animation-delay:-4s}
+    .study-doodle{position:absolute;width:clamp(76px,9vw,130px);height:auto;overflow:visible;color:var(--green);opacity:.44;filter:drop-shadow(0 7px 12px color-mix(in srgb,var(--green) 10%,transparent));animation:study-drift 8s ease-in-out infinite}
+    .study-doodle path,.study-doodle rect,.study-doodle circle,.study-doodle line{vector-effect:non-scaling-stroke}
+    .doodle-book{left:17%;top:17%;width:clamp(105px,13vw,175px);animation-delay:-1.4s}
+    .doodle-book .book-page{fill:var(--paper);fill-opacity:.7}
+    .doodle-pencil{right:17%;top:20%;width:clamp(58px,7vw,92px);animation-name:study-tilt;animation-duration:7s;animation-delay:-3s}
+    .doodle-notes{left:18%;bottom:15%;width:clamp(72px,8vw,112px);animation-delay:-4.5s}
+    .doodle-sparkles{right:18%;bottom:18%;width:clamp(68px,8vw,108px);animation-name:study-twinkle;animation-duration:6s;animation-delay:-2s}
+    .study-doodle .soft-fill{fill:var(--mint);fill-opacity:.75}
+    @keyframes study-drift{0%,100%{transform:translate3d(0,0,0) rotate(-2deg)}50%{transform:translate3d(0,-12px,0) rotate(1deg)}}
+    @keyframes study-tilt{0%,100%{transform:translate3d(0,0,0) rotate(17deg)}50%{transform:translate3d(0,-10px,0) rotate(22deg)}}
+    @keyframes study-twinkle{0%,100%{transform:translate3d(0,0,0) scale(.97);opacity:.34}50%{transform:translate3d(0,-8px,0) scale(1.04);opacity:.58}}
+    @keyframes orb-breathe{0%,100%{transform:scale(.96);opacity:.28}50%{transform:scale(1.04);opacity:.4}}
+    @media(max-width:700px){.doodle-book{left:3%;top:8%}.doodle-pencil{right:4%;top:10%}.doodle-notes{left:3%;bottom:8%}.doodle-sparkles{right:4%;bottom:9%}.study-doodle{opacity:.23}.auth-orb-one{left:-26%;top:7%}.auth-orb-two{right:-26%;bottom:5%}}
+    @media(prefers-reduced-motion:reduce){.auth-scene *{animation:none!important}}
     body:not(.auth-required) .auth-gate{display:none}
     .auth-card{width:min(100%,440px);padding:32px;border:1px solid var(--line);border-radius:24px;background:var(--paper);box-shadow:var(--shadow)}
     .auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:26px;font-size:22px;font-weight:760;letter-spacing:-.04em}
@@ -83,6 +103,31 @@
 </head>
 <body class="auth-required">
   <section class="auth-gate" id="authGate" aria-label="Student account">
+    <div class="auth-scene" aria-hidden="true">
+      <span class="auth-orb auth-orb-one"></span>
+      <span class="auth-orb auth-orb-two"></span>
+      <svg class="study-doodle doodle-book" viewBox="0 0 180 130" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path class="book-page" d="M88 35C68 19 43 17 18 25v67c25-8 50-6 70 10V35Z"/>
+        <path class="book-page" d="M92 35c20-16 45-18 70-10v67c-25-8-50-6-70 10V35Z"/>
+        <path d="M90 35v67M31 43c15-4 30-3 43 4M31 57c15-4 30-3 43 4M106 47c14-7 29-8 43-4M106 61c14-7 29-8 43-4"/>
+        <path d="m23 107 24 7 22-6 21 8 22-8 22 6 24-7" opacity=".55"/>
+      </svg>
+      <svg class="study-doodle doodle-pencil" viewBox="0 0 90 150" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path class="soft-fill" d="m45 9 24 24-9 86-15 20-15-20-9-86L45 9Z"/>
+        <path d="m21 33 48 0M30 119h30M36 25l18 0M45 9v-5M38 137l7 9 7-9"/>
+      </svg>
+      <svg class="study-doodle doodle-notes" viewBox="0 0 120 135" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect class="soft-fill" x="22" y="13" width="76" height="104" rx="9"/>
+        <path d="M39 42h42M39 58h42M39 74h31M39 90h38"/>
+        <path d="m17 27-6 6 6 6M103 83l6 6-6 6" opacity=".6"/>
+        <circle cx="35" cy="27" r="2" fill="currentColor" stroke="none"/><circle cx="45" cy="27" r="2" fill="currentColor" stroke="none"/>
+      </svg>
+      <svg class="study-doodle doodle-sparkles" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path class="soft-fill" d="M58 12c5 23 12 30 35 35-23 5-30 12-35 35-5-23-12-30-35-35 23-5 30-12 35-35Z"/>
+        <path d="M96 75c3 13 7 17 20 20-13 3-17 7-20 20-3-13-7-17-20-20 13-3 17-7 20-20Z"/>
+        <path d="M20 10v14M13 17h14M21 88v12M15 94h12" opacity=".7"/>
+      </svg>
+    </div>
     <div class="auth-card">
       <div class="auth-brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect class="mark-sheet-back" x="3.5" y="11.5" width="21" height="25" rx="3" stroke-width="1.8"/><rect class="mark-sheet" x="8" y="7.5" width="21" height="25" rx="3" stroke-width="1.8"/><rect class="mark-sheet" x="12.5" y="3.5" width="21" height="25" rx="3" stroke-width="1.8"/><path class="mark-check" d="m16.5 10.5 3.2 3.2 6-6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path class="mark-lines" d="M16.5 19h12M16.5 23h8" stroke-width="1.7" stroke-linecap="round"/></svg></span><span class="brand-wordmark"><span>study</span><span>space</span></span></div>
       <h1 id="authHeading">Welcome back</h1>
