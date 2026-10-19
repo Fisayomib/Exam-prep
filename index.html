@@ -68,7 +68,6 @@
     body:not(.auth-required) .auth-gate{display:none}
     .auth-card{width:min(100%,440px);padding:32px;border:1px solid var(--line);border-radius:24px;background:var(--paper);box-shadow:var(--shadow)}
     .auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:26px;font-size:22px;font-weight:760;letter-spacing:-.04em}
-    .auth-brand-mark{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:var(--green);color:white;font-weight:800}
     .auth-card h1{font-size:27px;letter-spacing:-.04em;margin:0 0 5px}
     .auth-card>p{color:var(--muted);margin:0 0 20px}
     .auth-form .field{margin:13px 0}
@@ -85,7 +84,7 @@
 <body class="auth-required">
   <section class="auth-gate" id="authGate" aria-label="Student account">
     <div class="auth-card">
-      <div class="auth-brand"><span class="auth-brand-mark" aria-hidden="true">S</span><span>studyspace</span></div>
+      <div class="auth-brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect class="mark-sheet-back" x="3.5" y="11.5" width="21" height="25" rx="3" stroke-width="1.8"/><rect class="mark-sheet" x="8" y="7.5" width="21" height="25" rx="3" stroke-width="1.8"/><rect class="mark-sheet" x="12.5" y="3.5" width="21" height="25" rx="3" stroke-width="1.8"/><path class="mark-check" d="m16.5 10.5 3.2 3.2 6-6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path class="mark-lines" d="M16.5 19h12M16.5 23h8" stroke-width="1.7" stroke-linecap="round"/></svg></span><span class="brand-wordmark"><span>study</span><span>space</span></span></div>
       <h1 id="authHeading">Welcome back</h1>
       <p id="authDescription">Sign in to open your personal study space.</p>
       <form class="auth-form" id="authForm">
