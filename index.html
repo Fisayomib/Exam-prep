@@ -50,11 +50,17 @@
     .mobile-nav{background:var(--paper)}
   </style>
   <link rel="stylesheet" href="dark-mode.css" />
+  <style>
+    .brand-mark{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:0;background:transparent;color:var(--green-dark)}
+    .brand-mark svg{display:block;width:100%;height:100%}
+    .brand-wordmark{display:flex;gap:0;letter-spacing:-.04em;color:var(--ink)}
+    .brand-wordmark span:last-child{color:var(--green)}
+  </style>
 </head>
 <body>
   <div class="shell">
     <aside class="sidebar" aria-label="Main navigation">
-      <div class="brand"><span class="brand-mark">s</span> studyspace</div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="11.5" width="21" height="25" rx="3" fill="var(--mint)" stroke="var(--green-dark)" stroke-width="1.8"/><rect x="8" y="7.5" width="21" height="25" rx="3" fill="var(--paper)" stroke="var(--green-dark)" stroke-width="1.8"/><rect x="12.5" y="3.5" width="21" height="25" rx="3" fill="var(--paper)" stroke="var(--green-dark)" stroke-width="1.8"/><path d="m16.5 10.5 3.2 3.2 6-6" stroke="var(--green)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 19h12M16.5 23h8" stroke="var(--green-dark)" stroke-width="1.7" stroke-linecap="round"/></svg></span><span class="brand-wordmark"><span>study</span><span>space</span></span></div>
       <p class="nav-label">Workspace</p>
       <nav class="nav">
         <button class="active" data-screen="dashboard"><span class="nav-icon">⌂</span>Overview</button>
