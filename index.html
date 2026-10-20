@@ -74,6 +74,8 @@
   </style>
   <style>
     body.auth-required .shell,body.auth-required .mobile-nav{display:none}
+    body.auth-checking .auth-card>:not(.auth-brand):not(#authLoading){display:none!important}
+    .auth-loading{display:none;color:var(--muted);margin:18px 0 0}
     .auth-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:var(--canvas);color:var(--ink)}
     .auth-gate{overflow:hidden;isolation:isolate}
     .auth-card{position:relative;z-index:1}
@@ -111,7 +113,7 @@
     @media(max-width:500px){.auth-card{padding:24px}}
   </style>
 </head>
-<body class="auth-required">
+<body class="auth-required auth-checking">
   <section class="auth-gate" id="authGate" aria-label="Student account">
     <div class="auth-scene" aria-hidden="true">
       <span class="auth-orb auth-orb-one"></span>
@@ -140,6 +142,7 @@
     </div>
     <div class="auth-card">
       <div class="auth-brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect class="mark-sheet-back" x="3.5" y="11.5" width="21" height="25" rx="3" stroke-width="1.8"/><rect class="mark-sheet" x="8" y="7.5" width="21" height="25" rx="3" stroke-width="1.8"/><rect class="mark-sheet" x="12.5" y="3.5" width="21" height="25" rx="3" stroke-width="1.8"/><path class="mark-check" d="m16.5 10.5 3.2 3.2 6-6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path class="mark-lines" d="M16.5 19h12M16.5 23h8" stroke-width="1.7" stroke-linecap="round"/></svg></span><span class="brand-wordmark"><span>study</span><span>space</span></span></div>
+      <p class="auth-loading" id="authLoading">Restoring your study space…</p>
       <h1 id="authHeading">Welcome back</h1>
       <p id="authDescription">Sign in to open your personal study space.</p>
       <form class="auth-form" id="authForm">
@@ -304,6 +307,7 @@
     }
     function leaveAccount(){
       authUser=null;accountHydrated=false;subjects=[];currentId=null;currentTab='topics';
+      document.body.classList.remove('auth-checking');
       document.body.classList.add('auth-required');
       document.getElementById('accountLabel').textContent='Student account';
       document.getElementById('accountAvatar').textContent='S';
@@ -316,7 +320,7 @@
       authUser=user;accountHydrated=false;
       authMessage('Loading your study space…');
       const {data,error}=await studyspaceClient.from('student_data').select('payload').eq('user_id',user.id).maybeSingle();
-      if(error){authUser=null;accountLoadingId=null;authMessage('Could not load your account data. Check that the database setup has been applied, then try again.',true);return}
+      if(error){authUser=null;accountLoadingId=null;document.body.classList.remove('auth-checking');authMessage('Could not load your account data. Check that the database setup has been applied, then try again.',true);return}
       const payload=data?.payload||{};
       subjects=Array.isArray(payload.subjects)?payload.subjects:[];
       localStorage.setItem(accountKey(testStoreKey),JSON.stringify(payload.tests||{}));
@@ -325,7 +329,7 @@
       const username=profile.data?.username||user.user_metadata?.username||'Student';
       document.getElementById('accountLabel').textContent=username;
       document.getElementById('accountAvatar').textContent=username.slice(0,1).toUpperCase();
-      accountHydrated=true;accountLoadingId=null;document.body.classList.remove('auth-required');authMessage('');
+      accountHydrated=true;accountLoadingId=null;document.body.classList.remove('auth-required','auth-checking');authMessage('');
       renderDashboard();renderSidebar();
       let savedStudyView=null;
       try{savedStudyView=JSON.parse(localStorage.getItem(accountKey('studyspace-view-v1'))||'null')}catch{}
@@ -350,7 +354,7 @@
       const setup=document.getElementById('authSetup');
       document.getElementById('authSwitch').onclick=()=>setAuthMode(authMode==='signin'?'signup':'signin');
       const config=window.STUDYSPACE_SUPABASE||{};
-      if(!config.url||!config.anonKey||!window.supabase?.createClient){authMessage('Connect Supabase to enable account sign-in.');return}
+      if(!config.url||!config.anonKey||!window.supabase?.createClient){document.body.classList.remove('auth-checking');authMessage('Connect Supabase to enable account sign-in.');return}
       setup.hidden=true;
       studyspaceClient=window.supabase.createClient(config.url,config.anonKey);
       document.getElementById('authForm').addEventListener('submit',async event=>{
@@ -376,8 +380,9 @@
         setTimeout(()=>{if(session?.user)enterAccount(session.user);else if(event==='SIGNED_OUT')leaveAccount()},0);
       });
       const {data,error}=await studyspaceClient.auth.getSession();
-      if(error){authMessage('Could not check your sign-in session. Please refresh and try again.',true);return}
+      if(error){document.body.classList.remove('auth-checking');authMessage('Could not check your sign-in session. Please refresh and try again.',true);return}
       if(data.session?.user)await enterAccount(data.session.user);
+      else document.body.classList.remove('auth-checking');
     }
     setAuthMode('signin');
     startAuthentication();
