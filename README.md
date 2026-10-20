@@ -9,6 +9,7 @@ A clickable, responsive browser prototype for the exam-preparation app. Open `in
 - Read a topic summary, with a print-to-PDF action.
 - Create tests with their own date and choose topics already confirmed for the subject. Edit the topic selection later.
 - Mark topics complete, then access topic practice and whole-subject practice.
+- Start a fresh, unsaved Active Recall session for any topic, write a free-text answer, and revise/resubmit after feedback.
 - Use a separate My subjects page and a separate Study calendar page from the left navigation.
 - Work through real flashcard-style front and back cards. A student must type an answer before revealing each back.
 - Choose from ten appearance palettes in light or dark mode, preview choices, and keep both preferences saved in this browser.
@@ -19,7 +20,7 @@ A clickable, responsive browser prototype for the exam-preparation app. Open `in
 
 ## Prototype limits
 
-This remains a front-end prototype, not a connected AI product. After Supabase is configured, authentication and account-scoped subject data use the connected service. It does not upload or store file contents, read documents or handwriting, generate real topic suggestions, summarize notes, or generate questions. The upload review uses file names as visible placeholder suggestions. The summary and practice screens show sample content. The PDF button opens the browser's print dialog, where a student can choose Save as PDF.
+This remains a front-end prototype, not a connected AI product. After Supabase is configured, authentication and account-scoped subject data use the connected service. It does not upload or store file contents, read documents or handwriting, generate real topic suggestions, provide live AI feedback for Active Recall, summarize notes, or generate questions. The Active Recall screen is implemented, but note-grounded feedback requires document-text processing and deployment of the `active-recall-feedback` Supabase Edge Function. It will not invent feedback when source material is unavailable. The upload review uses file names as visible placeholder suggestions. The summary and practice screens show sample content. The PDF button opens the browser's print dialog, where a student can choose Save as PDF.
 
 The dashboard previously used sample subjects in local storage. Authenticated accounts start with their own empty subject list. Clear the site's local storage to reset appearance preferences and any old demo state.
 
