@@ -283,19 +283,6 @@
   </script>
   <script src="app-enhancements.js"></script>
   <script>
-    const savedStudyView=JSON.parse(localStorage.getItem('studyspace-view-v1')||'null');
-    if(savedStudyView){
-      if(savedStudyView.screen==='subject'&&subjects.some(subject=>subject.id===savedStudyView.subjectId)){
-        currentId=savedStudyView.subjectId;
-        currentTab=['topics','tests','past'].includes(savedStudyView.tab)?savedStudyView.tab:'topics';
-        renderSubject();
-        showScreen('subject');
-      }else if(['dashboard','subjects','calendar'].includes(savedStudyView.screen)){
-        showStudyPage(savedStudyView.screen);
-      }
-    }
-  </script>
-  <script>
     let studyspaceClient=null;
     let accountHydrated=false;
     let accountLoadingId=null;
@@ -339,7 +326,16 @@
       document.getElementById('accountLabel').textContent=username;
       document.getElementById('accountAvatar').textContent=username.slice(0,1).toUpperCase();
       accountHydrated=true;accountLoadingId=null;document.body.classList.remove('auth-required');authMessage('');
-      renderDashboard();renderSidebar();showStudyPage('dashboard');
+      renderDashboard();renderSidebar();
+      let savedStudyView=null;
+      try{savedStudyView=JSON.parse(localStorage.getItem(accountKey('studyspace-view-v1'))||'null')}catch{}
+      if(savedStudyView?.screen==='subject'&&subjects.some(subject=>subject.id===savedStudyView.subjectId)){
+        currentId=savedStudyView.subjectId;
+        currentTab=['topics','tests','past'].includes(savedStudyView.tab)?savedStudyView.tab:'topics';
+        renderSubject();showStudyPage('subject');
+      }else if(['dashboard','subjects','calendar'].includes(savedStudyView?.screen)){
+        showStudyPage(savedStudyView.screen);
+      }else showStudyPage('dashboard');
     }
     function queueAccountSync(){
       if(!studyspaceClient||!authUser||!accountHydrated)return;
