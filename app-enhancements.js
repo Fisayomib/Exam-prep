@@ -1,7 +1,14 @@
 function renderSubjectsPage(){
   const grid=document.getElementById('allSubjectGrid');
   if(!grid)return;
-  grid.innerHTML=subjects.map(s=>`<article class="subject-card" data-open="${esc(s.id)}"><div class="card-top"><span class="subject-badge">${esc(s.name.slice(0,1).toUpperCase())}</span><span class="dots">•••</span></div><h3>${esc(s.name)}</h3><p>${s.topics.length} ${s.topics.length===1?'topic':'topics'} · Exam ${esc(fmtDate(s.exam))}</p><div class="progress"><span style="width:${s.topics.length?Math.round(s.topics.filter(t=>t.done).length/s.topics.length*100):0}%"></span></div><div class="card-bottom"><span>${s.topics.filter(t=>t.done).length} of ${s.topics.length} topics complete</span><span>Open →</span></div></article>`).join('')||`<div class="empty" style="grid-column:1/-1"><h3>No subjects yet</h3><p>Create a subject to organize your notes and study plans.</p><button class="primary" id="addSubjectFromEmpty">＋ Add a subject</button></div>`;
+  grid.innerHTML=subjects.map(s=>`<article class="subject-card" role="button" tabindex="0" data-open="${esc(s.id)}"><div class="card-top"><span class="subject-badge">${esc(s.name.slice(0,1).toUpperCase())}</span><span class="dots">•••</span></div><h3>${esc(s.name)}</h3><p>${s.topics.length} ${s.topics.length===1?'topic':'topics'} · Exam ${esc(fmtDate(s.exam))}</p><div class="progress"><span style="width:${s.topics.length?Math.round(s.topics.filter(t=>t.done).length/s.topics.length*100):0}%"></span></div><div class="card-bottom"><span>${s.topics.filter(t=>t.done).length} of ${s.topics.length} topics complete</span><span>Open →</span></div></article>`).join('')||`<div class="empty" style="grid-column:1/-1"><h3>No subjects yet</h3><p>Create a subject to organize your notes and study plans.</p><button class="primary" id="addSubjectFromEmpty">＋ Add a subject</button></div>`;
+  grid.querySelectorAll('[data-open]').forEach(card=>{
+    const open=()=>openSubject(card.dataset.open);
+    card.addEventListener('click',open);
+    card.addEventListener('keydown',event=>{
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}
+    });
+  });
 }
 
 function renderCalendarPage(){
