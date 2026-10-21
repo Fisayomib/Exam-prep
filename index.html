@@ -201,6 +201,9 @@
   <nav class="mobile-nav" aria-label="Mobile navigation"><button class="active" data-screen="dashboard"><span>⌂</span>Home</button><button data-screen="subjects"><span>▦</span>Subjects</button><button data-screen="calendar"><span>◷</span>Calendar</button></nav>
   <div class="modal-backdrop" id="modalBackdrop" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle"></h2><p id="modalSubtitle"></p></div><button class="close" id="closeModal" aria-label="Close dialog">×</button></div><div id="modalBody"></div><div class="modal-actions" id="modalActions"></div></section></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.9.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script>
@@ -231,17 +234,137 @@
     function openSubjectModal(){openModal('Add a subject','Set up your course. You can add its notes now or later.',`<form id="subjectForm"><div class="field"><label for="newSubjectName">Subject name</label><input id="newSubjectName" name="name" required placeholder="e.g. Human Physiology" /></div><div class="field"><label for="newExamDate">General exam date</label><input id="newExamDate" name="exam" type="date" /><small>If you don’t know the date yet, you can add it later.</small></div></form>`,`<button class="secondary" data-cancel>Cancel</button><button class="primary" id="saveSubject">Create subject</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$('#saveSubject').onclick=()=>{let f=$('#subjectForm');if(!f.reportValidity())return;let fd=new FormData(f);let s={id:crypto.randomUUID(),name:fd.get('name').trim(),exam:fd.get('exam'),topics:[],notes:[],past:[],tests:[]};subjects.unshift(s);save();closeModal();openSubject(s.id);toast('Subject created. Add notes to get started.')};}
     function openSubjectSettings(){const subject=activeSubject();if(!subject)return;openModal('Subject settings','Update the subject name or general exam date.',`<form id="subjectSettingsForm"><div class="field"><label for="editSubjectName">Subject name</label><input id="editSubjectName" required value="${esc(subject.name)}" /></div><div class="field"><label for="editExamDate">General exam date</label><input id="editExamDate" type="date" value="${esc(subject.exam||'')}" /><small>You can leave this blank if the exam date hasn’t been announced.</small></div></form>`,`<button class="secondary" data-cancel>Cancel</button><button class="secondary" id="deleteSubjectBtn" style="color:#c2413b">Delete subject</button><button class="primary" id="saveSubjectSettings">Save changes</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$('#saveSubjectSettings').onclick=()=>{const form=$('#subjectSettingsForm');if(!form.reportValidity())return;subject.name=$('#editSubjectName').value.trim();subject.exam=$('#editExamDate').value;save();closeModal();renderSubject();toast('Subject details updated.')};$('#deleteSubjectBtn').onclick=()=>openDeleteSubjectConfirmation(subject)}
     function openDeleteSubjectConfirmation(subject){openModal(`Delete ${subject.name}?`,'This removes the subject and its study data from this browser.',`<div class="note">This will remove its topics, notes list, summaries, tests, and past-question list. This action cannot be undone.</div>`,`<button class="secondary" data-cancel>Keep subject</button><button class="primary" id="confirmDeleteSubject" style="background:#b42318;border-color:#b42318">Delete subject</button>`);$('#modalActions [data-cancel]').onclick=()=>openSubjectSettings();$('#confirmDeleteSubject').onclick=()=>{subjects=subjects.filter(item=>item.id!==subject.id);const records=JSON.parse(localStorage.getItem(accountKey(testStoreKey))||'{}');delete records[subject.id];localStorage.setItem(accountKey(testStoreKey),JSON.stringify(records));currentId=null;currentTab='topics';save();closeModal();showScreen('dashboard');toast('Subject deleted.') }}
-    function openUploadModal(kind){uploadKind=kind;let past=kind==='past';openModal(past?'Add past questions':'Upload your notes',past?'Keep past questions in this subject for a separate practice mode.':'Upload one or more files. The app will suggest topics for you to review.',`<div class="upload-zone"><div style="font-size:25px;color:var(--green)">${past?'▤':'↥'}</div><div class="field" style="margin:9px 0"><label for="filePicker">Choose files</label><input id="filePicker" type="file" multiple accept=".pdf,.ppt,.pptx,.doc,.docx,.jpg,.jpeg,.png,.webp" /></div><p>PDF, PowerPoint, Word, JPG, PNG and WebP</p></div><div id="selectedFiles" class="file-list" style="margin-top:12px"></div><div class="note">Prototype note: this preview can’t read file contents yet. Topic suggestions below are placeholders; a document-reading service is needed for real extraction.</div>`,`<button class="secondary" data-cancel>Cancel</button><button class="primary" id="continueUpload">${past?'Add files':'Review suggested topics'}</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$('#filePicker').onchange=e=>{$('#selectedFiles').innerHTML=[...e.target.files].map(f=>`<div class="file-item">▤ &nbsp;${esc(f.name)} <span style="color:#89938b">(${Math.max(1,Math.round(f.size/1024))} KB)</span></div>`).join('')};$('#continueUpload').onclick=()=>{let files=[...$('#filePicker').files];if(!files.length){toast('Choose at least one file first.');return}pendingUpload=files;let s=activeSubject();if(past){s.past.push(...files.map(f=>f.name));save();closeModal();renderSubject();toast('Past questions added to this subject.');return}closeModal();openTopicReview(files)}}
+    function openUploadModal(kind){
+      uploadKind=kind;
+      const past=kind==='past';
+      const accepted='.pdf,.pptx,.docx,.txt,.md';
+      openModal(past?'Add past questions':'Upload your notes',past?'Keep past questions in this subject for a separate practice mode.':'Upload readable course notes. Studyspace will extract their text so summaries and practice can use your material.','<div class="upload-zone"><div style="font-size:25px;color:var(--green)">'+(past?'▤':'↥')+'</div><div class="field" style="margin:9px 0"><label for="filePicker">Choose files</label><input id="filePicker" type="file" multiple accept="'+accepted+'" /></div><p>PDF, PowerPoint, Word, TXT and Markdown</p></div><div id="selectedFiles" class="file-list" style="margin-top:12px"></div><div class="note">Note text is extracted in your browser and saved with this subject in your private account. Supported: PDF, PPTX, DOCX, TXT and MD. Each file must be under 15 MB.</div>', '<button class="secondary" data-cancel>Cancel</button><button class="primary" id="continueUpload">'+(past?'Add files':'Review suggested topics')+'</button>');
+      $('#modalActions [data-cancel]').onclick=closeModal;
+      $('#filePicker').onchange=e=>{$('#selectedFiles').innerHTML=[...e.target.files].map(f=>'<div class="file-item">▤ &nbsp;'+esc(f.name)+' <span style="color:#89938b">('+Math.max(1,Math.round(f.size/1024))+' KB)</span></div>').join('')};
+      $('#continueUpload').onclick=()=>{
+        const files=[...$('#filePicker').files];
+        if(!files.length){toast('Choose at least one file first.');return}
+        if(files.some(file=>file.size>15*1024*1024)){toast('Each notes file must be under 15 MB.');return}
+        pendingUpload=files;
+        const subject=activeSubject();
+        if(past){subject.past.push(...files.map(file=>file.name));save();closeModal();renderSubject();toast('Past questions added to this subject.');return}
+        closeModal();openTopicReview(files);
+      };
+    }
     function guessedTopic(file){return file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\b(lecture|notes|slides|week|chapter|final|updated)\b/gi,'').replace(/\s+/g,' ').trim()||'Suggested topic'}
-    function openTopicReview(files){let names=[...new Set(files.map(guessedTopic))];openModal('Review suggested topics','Confirm or correct the topics before they’re added to your subject.',`<div class="topic-edit-list">${names.map((n,i)=>`<div class="topic-edit"><input aria-label="Suggested topic ${i+1}" value="${esc(n)}" /><button type="button" data-remove-topic="${i}" aria-label="Remove topic suggestion">×</button></div>`).join('')}</div><div class="note">You can rename a suggestion or remove it if it doesn’t match the notes. Topics are added only after you confirm.</div>`,`<button class="secondary" data-cancel>Cancel</button><button class="primary" id="confirmTopics">Confirm topics</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$$('[data-remove-topic]').forEach(b=>b.onclick=()=>b.parentElement.remove());$('#confirmTopics').onclick=()=>{let s=activeSubject();let topics=$$('.topic-edit input').map(i=>i.value.trim()).filter(Boolean);s.notes.push(...files.map(f=>f.name));for(const name of topics)if(!s.topics.some(t=>t.name.toLowerCase()===name.toLowerCase()))s.topics.push({name,done:false});save();closeModal();renderSubject();toast('Notes added and topics confirmed. Summaries are ready in this prototype.')}}
+    function openTopicReview(files){
+      const names=[...new Set(files.map(guessedTopic))];
+      openModal('Review suggested topics','Confirm or correct the topics found in your uploaded materials.','<div class="topic-edit-list">'+names.map((name,index)=>'<div class="topic-edit"><input data-source-name="'+esc(name)+'" aria-label="Suggested topic '+(index+1)+'" value="'+esc(name)+'" /><button type="button" data-remove-topic="'+index+'" aria-label="Remove topic suggestion">×</button></div>').join('')+'</div><div class="note">Confirming reads the selected files and attaches their extracted text to the matching topic.</div><p id="noteReadStatus" role="status" aria-live="polite"></p>','<button class="secondary" data-cancel>Cancel</button><button class="primary" id="confirmTopics">Read notes and confirm</button>');
+      $('#modalActions [data-cancel]').onclick=closeModal;
+      $$('[data-remove-topic]').forEach(button=>button.onclick=()=>button.parentElement.remove());
+      $('#confirmTopics').onclick=async()=>{
+        const confirmButton=$('#confirmTopics'),status=$('#noteReadStatus');
+        const edits=$$('.topic-edit input[data-source-name]');
+        const namesBySource=new Map(edits.map(input=>[input.dataset.sourceName,input.value.trim()]).filter(item=>item[1]));
+        if(!namesBySource.size){toast('Keep or add at least one topic before confirming.');return}
+        confirmButton.disabled=true;status.textContent='Reading your notes…';
+        try{
+          const extracted=[];
+          for(const file of files){
+            const sourceText=await extractNoteText(file);
+            const topicName=namesBySource.get(guessedTopic(file));
+            if(topicName)extracted.push({file:file.name,topicName,sourceText});
+          }
+          if(!extracted.length)throw new Error('No readable notes were attached to the topics you kept.');
+          const subject=activeSubject();
+          subject.notes=[...new Set([...(subject.notes||[]),...files.map(file=>file.name)])];
+          for(const entry of extracted){
+            let topic=subject.topics.find(item=>item.name.toLowerCase()===entry.topicName.toLowerCase());
+            if(!topic){topic={name:entry.topicName,done:false,sourceText:''};subject.topics.push(topic)}
+            const addition='\n\n[Source: '+entry.file+']\n'+entry.sourceText;
+            topic.sourceText=((topic.sourceText||'')+addition).slice(0,120000);
+            topic.aiSummary=null;
+          }
+          save();closeModal();renderSubject();toast('Notes saved. AI summaries and practice are ready for these topics.');
+        }catch(error){
+          confirmButton.disabled=false;
+          status.textContent=error.message||'Could not read one of these files. Try a PDF, PPTX, DOCX, TXT or MD file with selectable text.';
+        }
+      };
+    }
     function openTestModal(editIndex=null){let s=activeSubject();if(!s.topics.length){toast('Upload notes and confirm topics before creating a test.');return}s.tests=s.tests||[];let existing=editIndex===null?null:s.tests[editIndex];openModal(existing?'Update test topics':'Create a test',existing?'Add newly available topics or adjust this test’s scope.':'Give this test its own date and choose from topics confirmed in this subject.',`<form id="testForm"><div class="field"><label for="testName">Test name</label><input id="testName" required value="${esc(existing?.name||'') }" placeholder="e.g. Mid-semester test" /></div><div class="field"><label for="testDate">Test date</label><input id="testDate" required type="date" value="${esc(existing?.date||'')}" /></div><div class="field"><label>Topics for this test</label>${s.topics.map(t=>`<label class="choice" style="margin:6px 0"><input type="checkbox" value="${esc(t.name)}" ${existing?.topics.includes(t.name)?'checked':''}><span>${esc(t.name)}</span></label>`).join('')}</div></form>`,`<button class="secondary" data-cancel>Cancel</button><button class="primary" id="saveTest" type="submit" form="testForm">${existing?'Save changes':'Create test'}</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$('#testForm').onsubmit=e=>{e.preventDefault();let f=$('#testForm');if(!f.reportValidity())return;let t={name:$('#testName').value.trim(),date:$('#testDate').value,topics:$$('#testForm input[type=checkbox]:checked').map(x=>x.value)};if(editIndex===null)s.tests.push(t);else s.tests[editIndex]=t;save();closeModal();currentTab='tests';persistStudyView('subject');renderSubject();toast(existing?'Test updated.':'Test added to your subject.')}}
     function editTestTopics(i){openTestModal(i)}
-    function showSummary(i){let s=activeSubject(),t=s.topics[i];$('#summaryContent').innerHTML=`<div class="eyebrow">${esc(s.name)} · Topic summary</div><h1>${esc(t.name)}</h1><p class="summary-meta">Based on materials confirmed for this topic</p><h2>In simple terms</h2><p>${esc(t.name)} is a topic in your ${esc(s.name)} course. This sample shows where the topic summary will appear once notes are processed.</p><h2>Key ideas</h2><ul><li>Core concepts will be summarized from the notes you upload.</li><li>Long material will be organized into clear subtopics.</li><li>Important terms and relationships will be highlighted for revision.</li></ul><h2>Examples</h2><p>Worked examples will be included for calculation topics. Other topics will use relevant real-life examples where they help explain the idea.</p><div class="context-note"><strong>Extra context</strong><br/>Helpful information beyond your uploaded notes will be labelled separately. If the notes don’t support a confident explanation, the app should say what is missing rather than guess.</div><div class="summary-actions"><button class="primary" id="summaryPractice">Practise this topic</button><button class="secondary" id="summaryDownload">↓ Download PDF</button></div>`;$('#summaryPractice').onclick=()=>openPractice(i);$('#summaryDownload').onclick=()=>window.print();showScreen('summary')}
+    async function extractNoteText(file){
+      const name=file.name.toLowerCase();
+      let extracted='';
+      if(name.endsWith('.txt')||name.endsWith('.md')) extracted=await file.text();
+      else if(name.endsWith('.pdf')){
+        if(!window.pdfjsLib)throw new Error('The PDF reader did not load. Refresh the page and try again.');
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+        const pages=[];
+        for(let pageNumber=1;pageNumber<=pdf.numPages;pageNumber++){
+          const page=await pdf.getPage(pageNumber),content=await page.getTextContent();
+          pages.push(content.items.map(item=>item.str||'').join(' '));
+          if(pages.join('\n').length>80000)break;
+        }
+        extracted=pages.join('\n');
+      }else if(name.endsWith('.docx')){
+        if(!window.mammoth)throw new Error('The Word reader did not load. Refresh the page and try again.');
+        const result=await window.mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()});
+        extracted=result.value||'';
+      }else if(name.endsWith('.pptx')){
+        if(!window.JSZip)throw new Error('The PowerPoint reader did not load. Refresh the page and try again.');
+        const zip=await window.JSZip.loadAsync(await file.arrayBuffer());
+        const slideNames=Object.keys(zip.files).filter(path=>/^ppt\/slides\/slide\d+\.xml$/.test(path)).sort((a,b)=>Number(a.match(/slide(\d+)/)[1])-Number(b.match(/slide(\d+)/)[1]));
+        const slides=[];
+        for(const path of slideNames){
+          const xml=await zip.files[path].async('text'),doc=new DOMParser().parseFromString(xml,'application/xml');
+          slides.push([...doc.getElementsByTagName('a:t')].map(node=>node.textContent||'').join(' '));
+          if(slides.join('\n').length>80000)break;
+        }
+        extracted=slides.join('\n');
+      }else throw new Error('Use a PDF, PPTX, DOCX, TXT or MD file. This file type is not supported yet.');
+      extracted=String(extracted).replace(/\u0000/g,'').trim();
+      if(!extracted)throw new Error(file.name+' did not contain readable text. Scanned image-only PDFs need OCR before they can be used.');
+      return extracted.slice(0,80000);
+    }
+
+    async function callStudyAI(action,payload){
+      if(!studyspaceClient)throw new Error('Please sign in again to use the AI study tools.');
+      const sessionResult=await studyspaceClient.auth.getSession();
+      const token=sessionResult.data?.session?.access_token;
+      if(sessionResult.error||!token)throw new Error('Your sign-in has expired. Please sign in again.');
+      const response=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({...payload,action})});
+      let result={};try{result=await response.json()}catch{}
+      if(!response.ok)throw new Error(result.error||'The AI request could not be completed. Please try again.');
+      return result;
+    }
+
+    async function showSummary(i){
+      const subject=activeSubject(),topic=subject?.topics[i];
+      if(!subject||!topic)return;
+      showScreen('summary');
+      const renderSummary=summary=>{
+        const ideas=Array.isArray(summary.keyIdeas)?summary.keyIdeas:[];
+        $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="summary-meta">Based on materials confirmed for this topic</p><h2>In simple terms</h2><p>'+esc(summary.simpleTerms||'')+'</p><h2>Key ideas</h2>'+(ideas.length?'<ul>'+ideas.map(idea=>'<li>'+esc(idea)+'</li>').join('')+'</ul>':'<p>No key ideas were returned for this topic.</p>')+'<h2>Examples</h2><p>'+esc(summary.examples||'')+'</p>'+(summary.extraContext?'<div class="context-note"><strong>Extra context</strong><br/>'+esc(summary.extraContext)+'</div>':'')+(summary.gaps?'<div class="context-note"><strong>What the notes don’t cover</strong><br/>'+esc(summary.gaps)+'</div>':'')+'<div class="summary-actions"><button class="primary" id="summaryPractice">Practise this topic</button><button class="secondary" id="summaryDownload">↓ Download PDF</button></div>';
+        $('#summaryPractice').onclick=()=>openPractice(i);$('#summaryDownload').onclick=()=>window.print();
+      };
+      if(!topic.sourceText){
+        $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="summary-meta">Upload notes for this topic to create a grounded summary.</p><button class="secondary" id="summaryBack">Back to subject</button>';
+        $('#summaryBack').onclick=()=>{showScreen('subject');renderSubject()};return;
+      }
+      if(topic.aiSummary){renderSummary(topic.aiSummary);return}
+      $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="summary-meta" role="status">Reading your notes and preparing a summary…</p>';
+      try{
+        const summary=await callStudyAI('summary',{subject:subject.name,topic:topic.name,sourceNotes:topic.sourceText.slice(0,60000)});
+        if(!summary||typeof summary.simpleTerms!=='string'||!Array.isArray(summary.keyIdeas))throw new Error('The summary response was incomplete. Please try again.');
+        topic.aiSummary=summary;save();renderSummary(summary);
+      }catch(error){
+        $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="active-recall-error">'+esc(error.message||'The summary could not be created. Please try again.')+'</p><button class="primary" id="retrySummary">Try again</button>';
+        $('#retrySummary').onclick=()=>showSummary(i);
+      }
+    }
     function startActiveRecall(topicIndex){
   const subject=activeSubject(), topic=subject&&subject.topics[topicIndex];
   if(!subject||!topic)return;
   const noteText=[topic.sourceText,topic.notesText,topic.materialText].filter(v=>typeof v==='string'&&v.trim()).join('\n\n');
-  const summaryContext=[topic.summaryExtraContext,topic.aiSummaryContext].filter(v=>typeof v==='string'&&v.trim()).join('\n\n');
+  const summaryContext=[topic.aiSummary?.extraContext,topic.summaryExtraContext,topic.aiSummaryContext].filter(v=>typeof v==='string'&&v.trim()).join('\n\n');
   let attempt=0, busy=false, feedback=null;
   function render(){
     const html='<div class="eyebrow">'+esc(subject.name)+' · Active Recall</div>'+
@@ -266,7 +389,7 @@
       if(!studyspaceClient){$('#activeRecallStatus').innerHTML='<p class="active-recall-error">The AI feedback service is not connected yet.</p>';return}
       busy=true;attempt++;render();$('#activeRecallAnswer').value=answer;
       try{
-        const result=await studyspaceClient.functions.invoke('active-recall-feedback',{body:{subject:subject.name,topic:topic.name,answer:answer,sourceNotes:noteText,summaryExtraContext:summaryContext,attempt:attempt}});
+        const result=await callStudyAI('feedback',{subject:subject.name,topic:topic.name,answer:answer,sourceNotes:noteText,summaryExtraContext:summaryContext,attempt:attempt});
         if(result.error)throw result.error;
         const value=result.data;
         if(!value||!Array.isArray(value.rememberedCorrectly)||!Array.isArray(value.missed)||!Array.isArray(value.inaccurate))throw new Error('The feedback response was incomplete. Please try again.');
