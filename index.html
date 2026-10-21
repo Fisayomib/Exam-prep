@@ -52,6 +52,18 @@
   </style>
   <style>
     .active-recall-answer{width:100%;min-height:220px;border:1px solid var(--line);border-radius:13px;padding:14px;background:var(--paper);color:var(--ink);font:inherit;resize:vertical}
+    .summary-idea{padding:12px 14px;border:1px solid var(--line);border-radius:13px;margin:10px 0;background:var(--paper)}
+    .summary-idea>p{margin:7px 0}
+    .summary-check-toggle{margin:5px 0 0}
+    .summary-understanding{border-top:1px solid var(--line);margin-top:10px;padding-top:12px}
+    .summary-check-prompt{margin:0 0 8px}
+    .summary-check-answer{min-height:120px}
+    .summary-check-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:9px}
+    .summary-check-status{font-size:12px;color:var(--muted)}
+    .summary-check-feedback{margin-top:15px}
+    .summary-understanding[hidden],.summary-check-feedback[hidden]{display:none}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    @media(max-width:700px){.summary-check-actions{align-items:flex-start;flex-direction:column}}
     .active-recall-actions,.active-recall-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px}
     .active-recall-attempt,.active-recall-source{color:var(--muted);font-size:12px}
     .active-recall-feedback{margin-top:24px;padding:20px;border:1px solid var(--line);border-radius:15px;background:var(--paper)}
@@ -370,9 +382,14 @@
         const checklist=Array.isArray(summary.examChecklist)?summary.examChecklist:[];
         const mistakes=Array.isArray(summary.commonMistakes)?summary.commonMistakes:[];
         const selfCheck=Array.isArray(summary.selfCheck)?summary.selfCheck:[];
-        const ideaHtml=ideas.map(item=>{
+        const ideaHtml=ideas.map((item,index)=>{
           const concept=typeof item==='string'?item:(item.concept||'');
-          return '<li><strong>'+esc(concept)+'</strong>'+(item.explanation?'<p>'+esc(item.explanation)+'</p>':'')+(item.examRelevance?'<p><strong>For exams:</strong> '+esc(item.examRelevance)+'</p>':'')+'</li>';
+          return '<li class="summary-idea"><strong>'+esc(concept)+'</strong>'+(item.explanation?'<p>'+esc(item.explanation)+'</p>':'')+(item.examRelevance?'<p><strong>For exams:</strong> '+esc(item.examRelevance)+'</p>':'')+
+            '<button type="button" class="quiet summary-check-toggle" data-idea-check="'+index+'" aria-expanded="false" aria-controls="summary-understanding-'+index+'">Check my understanding</button>'+
+            '<div class="summary-understanding" id="summary-understanding-'+index+'" hidden><p class="summary-check-prompt">In your own words, explain <strong>'+esc(concept)+'</strong> and why it matters for this topic.</p>'+
+            '<form class="summary-check-form" data-idea-form="'+index+'"><label class="sr-only" for="summary-check-answer-'+index+'">Your explanation of '+esc(concept)+'</label><textarea id="summary-check-answer-'+index+'" class="active-recall-answer summary-check-answer" placeholder="Write your explanation here…" required></textarea>'+
+            '<div class="summary-check-actions"><span class="summary-check-status" role="status" aria-live="polite"></span><button class="primary" type="submit">Get feedback</button></div></form>'+
+            '<div class="active-recall-feedback summary-check-feedback" id="summary-check-feedback-'+index+'" hidden></div></div></li>';
         }).join('');
         const termsHtml=terms.map(item=>'<li><strong>'+esc(item.term||'')+':</strong> '+esc(item.definition||'')+'</li>').join('');
         const proceduresHtml=procedures.map(item=>'<h3>'+esc(item.title||'Process')+'</h3><ol>'+(Array.isArray(item.steps)?item.steps.map(step=>'<li>'+esc(step)+'</li>').join(''):'')+'</ol>').join('');
@@ -381,6 +398,28 @@
         const selfCheckHtml=selfCheck.map(item=>'<details class="summary-self-check"><summary>'+esc(item.question||'Revision question')+'</summary><p>'+esc(item.answer||'')+'</p></details>').join('');
         $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="summary-meta">Exam-ready guide based on the uploaded notes</p><h2>Topic overview</h2><p>'+esc(summary.topicOverview||summary.simpleTerms||'')+'</p>'+(ideaHtml?'<h2>Key ideas and why they matter</h2><ul>'+ideaHtml+'</ul>':'')+(termsHtml?'<h2>Key terms</h2><ul>'+termsHtml+'</ul>':'')+(proceduresHtml?'<h2>Processes and steps</h2>'+proceduresHtml:'')+(comparisonsHtml?'<h2>Important comparisons</h2><ul>'+comparisonsHtml+'</ul>':'')+(examplesHtml?'<h2>Worked examples</h2>'+examplesHtml:'')+(checklist.length?'<h2>Exam checklist</h2><ul>'+checklist.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul>':'')+(mistakes.length?'<h2>Common mistakes to avoid</h2><ul>'+mistakes.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul>':'')+(selfCheckHtml?'<h2>Check your understanding</h2>'+selfCheckHtml:'')+(summary.coverageNote?'<div class="context-note"><strong>Coverage</strong><br/>'+esc(summary.coverageNote)+'</div>':'')+(summary.extraContext?'<div class="context-note"><strong>Extra context</strong><br/>'+esc(summary.extraContext)+'</div>':'')+(summary.gaps?'<div class="context-note"><strong>What the notes don’t cover</strong><br/>'+esc(summary.gaps)+'</div>':'')+'<div class="summary-actions"><button class="primary" id="summaryPractice">Practise this topic</button><button class="secondary" id="summaryRegenerate">Regenerate summary</button><button class="secondary" id="summaryDownload">↓ Download PDF</button></div>';
         $('#summaryPractice').onclick=()=>openPractice(i);$('#summaryRegenerate').onclick=()=>showSummary(i,true);$('#summaryDownload').onclick=()=>window.print();
+        $('#summaryContent [data-idea-check]').forEach(button=>button.onclick=()=>{
+          const panel=$('#'+button.getAttribute('aria-controls')),opening=panel.hidden;
+          panel.hidden=!opening;button.setAttribute('aria-expanded',String(opening));
+          button.textContent=opening?'Hide check':'Check my understanding';
+          if(opening)panel.querySelector('textarea')?.focus();
+        });
+        $('#summaryContent [data-idea-form]').forEach(form=>form.onsubmit=async event=>{
+          event.preventDefault();
+          const index=Number(form.dataset.ideaForm),item=ideas[index],concept=typeof item==='string'?item:(item?.concept||'this idea');
+          const answer=form.querySelector('textarea').value.trim(),submit=form.querySelector('button[type="submit"]'),status=form.querySelector('.summary-check-status'),feedbackBox=$('#summary-check-feedback-'+index);
+          if(!answer)return;
+          submit.disabled=true;status.textContent='Reviewing your explanation…';feedbackBox.hidden=true;
+          try{
+            const summaryContext=JSON.stringify({topicOverview:summary.topicOverview,keyIdeas:summary.keyIdeas,keyTerms:summary.keyTerms,procedures:summary.procedures,comparisons:summary.comparisons,extraContext:summary.extraContext||''}).slice(0,12000);
+            const feedback=await callStudyAI('feedback',{subject:subject.name,topic:topic.name,answer,sourceNotes:(topic.sourceText||'').slice(0,200000),summaryExtraContext:summaryContext,attempt:1});
+            if(!feedback||!Array.isArray(feedback.rememberedCorrectly)||!Array.isArray(feedback.missed)||!Array.isArray(feedback.inaccurate))throw new Error('The feedback response was incomplete. Please try again.');
+            const list=(title,items,empty)=>'<h2>'+title+'</h2>'+(items.length?'<ul>'+items.map(entry=>'<li>'+esc(entry)+'</li>').join('')+'</ul>':'<p>'+empty+'</p>');
+            feedbackBox.innerHTML=list('You explained well',feedback.rememberedCorrectly,'There is more to add; see the suggestions below.')+list('Worth adding',feedback.missed,'You covered the main points for this idea.')+list('Clarifications',feedback.inaccurate,'No corrections needed.')+'<p>'+esc(feedback.closingNote||'Use this feedback to refine your understanding.')+'</p><p class="active-recall-source">Qualitative feedback based on this topic’s notes and summary.</p>';
+            feedbackBox.hidden=false;status.textContent='Feedback is ready.';
+          }catch(error){status.textContent=error.message||'Feedback could not be generated. Please try again.'}
+          finally{submit.disabled=false}
+        });
       };
       if(!topic.sourceText){
         $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="summary-meta">Upload notes for this topic to create a grounded summary.</p><button class="secondary" id="summaryBack">Back to subject</button>';
