@@ -43,9 +43,9 @@ async function renderPractice(topic,kinds,past){
   const title=past?'Past-question practice':topic?'Practise: '+topic.name:subject.name+' practice';
   const selectedTopics=topic?[topic]:subject.topics;
   const sourceNotes=past
-    ?(subject.pastSources||[]).map(source=>'[Past question file: '+source.name+']\\n'+source.text).join('\\n\\n').slice(0,60000)
-    :selectedTopics.map(item=>'[Topic: '+item.name+']\\n'+(item.sourceText||'')).filter(text=>text.trim()).join('\\n\\n').slice(0,60000);
-  const summaryExtraContext=selectedTopics.map(item=>item.aiSummary?JSON.stringify(item.aiSummary):'').filter(Boolean).join('\\n\\n').slice(0,12000);
+    ?(subject.pastSources||[]).map(source=>'[Past question file: '+source.name+']\n'+source.text).join('\n\n').slice(0,60000)
+    :selectedTopics.map(item=>'[Topic: '+item.name+']\n'+(item.sourceText||'')).filter(text=>text.trim()).join('\n\n').slice(0,60000);
+  const summaryExtraContext=selectedTopics.map(item=>item.aiSummary?JSON.stringify(item.aiSummary):'').filter(Boolean).join('\n\n').slice(0,12000);
   const content=document.getElementById('practiceContent');
   showStudyPage('practice');
   if(!sourceNotes){
