@@ -38,37 +38,72 @@ function showStudyPage(name){
   window.scrollTo(0,0);
 }
 
-function renderPractice(topic,kinds,past){
-  const s=activeSubject();
-  const topicName=topic?.name||s.name;
-  const title=past?'Past-question practice':topic?`Practise: ${topic.name}`:`${s.name} practice`;
-  const sections=kinds.map(kind=>{
-    const heading=kind==='objective'?'Objective questions':kind==='theory'?'Theory questions':'Flashcards';
-    if(kind==='flashcards'){
-      const cards=[
-        {prompt:`What is one important idea from ${topicName}?`,answer:'A concise answer generated from the confirmed notes for this topic will appear here.'},
-        {prompt:`How would you explain ${topicName} in your own words?`,answer:'A second note-based answer will appear here, with key terms that help you check your recall.'}
-      ];
-      return `<section><h2 style="font-size:18px;margin:18px 0 7px">${heading}</h2><p style="color:var(--muted);font-size:13px">Type your answer before flipping each card to see the suggested answer.</p>${cards.map((card,i)=>`<div class="flashcard-wrap" data-flashcard="${i}"><div class="flashcard-rotator"><div class="flashcard-face"><span class="flashcard-label">Front · ${i+1} of ${cards.length}</span><h3 class="flashcard-prompt">${esc(card.prompt)}</h3><label for="flashAnswer${i}" style="display:block;font-size:12px;font-weight:650;margin-bottom:6px">Your answer</label><textarea id="flashAnswer${i}" class="flashcard-answer-input" placeholder="Type what you remember..."></textarea><div class="flashcard-controls"><span class="flashcard-index">Answer first, then reveal</span><button class="primary" data-flip="${i}" disabled>Check answer & flip</button></div></div><div class="flashcard-back"><span class="flashcard-label">Back · Suggested answer</span><h3 class="flashcard-prompt">${esc(card.prompt)}</h3><div class="flashcard-submitted" id="submitted${i}"></div><p style="font-size:14px;color:#435047">${esc(card.answer)}</p><div class="flashcard-controls"><span class="flashcard-index">Compare your recall with the answer.</span><button class="secondary" data-unflip="${i}">Flip back</button></div></div></div></div>`).join('')}</section>`;
-    }
-    const prompts=kind==='objective'?[`Which statement best describes ${topicName}?`,`Which idea is most important to remember?`]:[`Explain the main ideas in ${topicName} in your own words.`,`Give an example that demonstrates ${topicName}.`];
-    return `<section><h2 style="font-size:18px;margin:18px 0 7px">${heading}</h2>${prompts.map((q,i)=>`<div class="question"><p><strong>${i+1}. ${esc(q)}</strong></p>${kind==='objective'?'<label><input type="radio" name="q'+kind+i+'"> Option A</label> &nbsp; <label><input type="radio" name="q'+kind+i+'"> Option B</label> &nbsp; <label><input type="radio" name="q'+kind+i+'"> Option C</label>':''}<button class="quiet" data-answer="${kind+i}">Show answer</button><div class="answer" id="answer-${kind+i}">A note-based sample answer and explanation will be generated here.</div></div>`).join('')}</section>`;
-  }).join('');
-  document.getElementById('practiceContent').innerHTML=`<div class="eyebrow">${past?'Past questions':esc(s.name)}</div><h1 style="font-size:28px;letter-spacing:-.04em;margin:4px 0">${esc(title)}</h1><p style="color:var(--muted);margin:0">${past?'New questions will follow the style of the past questions uploaded to this subject.':'A sample practice screen. Real question generation will connect to the uploaded materials.'}</p>${sections}<button class="secondary" id="backToTopics">Back to topics</button>`;
-  document.querySelectorAll('[data-answer]').forEach(button=>button.onclick=()=>{const answer=document.getElementById(`answer-${button.dataset.answer}`);answer.classList.toggle('show');button.textContent=answer.classList.contains('show')?'Hide answer':'Show answer'});
-  document.querySelectorAll('[data-flashcard]').forEach(card=>{
-    const input=card.querySelector('.flashcard-answer-input');
-    const flip=card.querySelector('[data-flip]');
-    input.addEventListener('input',()=>{flip.disabled=!input.value.trim()});
-    flip.addEventListener('click',()=>{
-      if(!input.value.trim())return;
-      card.querySelector(`#submitted${flip.dataset.flip}`).textContent=`Your answer: ${input.value.trim()}`;
-      card.classList.add('is-flipped');
-    });
-    card.querySelector('[data-unflip]').addEventListener('click',()=>card.classList.remove('is-flipped'));
-  });
-  document.getElementById('backToTopics').onclick=()=>{showStudyPage('subject');renderSubject()};
+async function renderPractice(topic,kinds,past){
+  const subject=activeSubject();
+  const title=past?'Past-question practice':topic?'Practise: '+topic.name:subject.name+' practice';
+  const selectedTopics=topic?[topic]:subject.topics;
+  const sourceNotes=past
+    ?(subject.pastSources||[]).map(source=>'[Past question file: '+source.name+']\\n'+source.text).join('\\n\\n').slice(0,60000)
+    :selectedTopics.map(item=>'[Topic: '+item.name+']\\n'+(item.sourceText||'')).filter(text=>text.trim()).join('\\n\\n').slice(0,60000);
+  const summaryExtraContext=selectedTopics.map(item=>item.aiSummary?JSON.stringify(item.aiSummary):'').filter(Boolean).join('\\n\\n').slice(0,12000);
+  const content=document.getElementById('practiceContent');
   showStudyPage('practice');
+  if(!sourceNotes){
+    content.innerHTML='<div class="eyebrow">'+(past?'Past questions':esc(subject.name))+'</div><h1>'+esc(title)+'</h1><p class="active-recall-error">'+(past?'Upload readable past-question files before starting AI past-question practice.':'Upload readable notes for this topic before creating practice questions.')+'</p><button class="secondary" id="backToTopics">Back to subject</button>';
+    document.getElementById('backToTopics').onclick=()=>{showStudyPage('subject');renderSubject()};
+    return;
+  }
+  content.innerHTML='<div class="eyebrow">'+(past?'Past questions':esc(subject.name))+'</div><h1>'+esc(title)+'</h1><p role="status" style="color:var(--muted)">Creating questions from your study materials…</p>';
+  try{
+    const result=await callStudyAI('practice',{
+      subject:subject.name,
+      topic:topic?topic.name:(past?'uploaded past questions for '+subject.name:subject.name+' topics'),
+      sourceNotes:sourceNotes,
+      summaryExtraContext:past?'Use these past questions as style examples. Create new questions and do not copy questions verbatim.':summaryExtraContext,
+      kinds:kinds
+    });
+    const questions=Array.isArray(result.questions)?result.questions.filter(question=>question&&kinds.includes(question.kind)&&typeof question.question==='string'&&typeof question.answer==='string'):[];
+    if(!questions.length)throw new Error('No usable questions were returned. Please try again.');
+    const grouped=kinds.map(kind=>{
+      const list=questions.filter(question=>question.kind===kind);
+      if(!list.length)return '';
+      const heading=kind==='objective'?'Objective questions':kind==='theory'?'Theory questions':'Flashcards';
+      const cards=list.map((question,index)=>{
+        const number=questions.indexOf(question);
+        const prompt='<p><strong>'+ (index+1)+'. '+esc(question.question)+'</strong></p>';
+        let interaction='';
+        if(kind==='objective'){
+          const options=Array.isArray(question.options)?question.options:[];
+          interaction='<div class="ai-options">'+options.map((option,optionIndex)=>'<label class="choice"><input type="radio" name="ai-question-'+number+'" value="'+optionIndex+'"><span>'+esc(option)+'</span></label>').join('')+'</div><button class="quiet" type="button" data-check-question="'+number+'">Check answer</button><div class="answer" id="ai-answer-'+number+'"></div>';
+        }else{
+          interaction='<label for="ai-response-'+number+'" style="display:block;font-size:12px;font-weight:650;margin:8px 0 5px">Your response</label><textarea id="ai-response-'+number+'" class="active-recall-answer" placeholder="Write what you remember…"></textarea><button class="quiet" type="button" data-reveal-question="'+number+'">Show suggested answer</button><div class="answer" id="ai-answer-'+number+'"><strong>Suggested answer</strong><p>'+esc(question.answer)+'</p><p>'+esc(question.explanation||'')+'</p></div>';
+        }
+        return '<article class="question">'+prompt+interaction+'</article>';
+      }).join('');
+      return '<section><h2 style="font-size:18px;margin:18px 0 7px">'+heading+'</h2>'+cards+'</section>';
+    }).join('');
+    content.innerHTML='<div class="eyebrow">'+(past?'Past questions':esc(subject.name))+'</div><h1 style="font-size:28px;letter-spacing:-.04em;margin:4px 0">'+esc(title)+'</h1><p style="color:var(--muted);margin:0">Questions are based on your uploaded materials. Write your response before revealing a suggested answer.</p>'+grouped+'<button class="secondary" id="backToTopics">Back to subject</button>';
+    content.querySelectorAll('[data-check-question]').forEach(button=>button.onclick=()=>{
+      const number=Number(button.dataset.checkQuestion),question=questions[number];
+      const selected=content.querySelector('input[name="ai-question-'+number+'"]:checked');
+      const answer=document.getElementById('ai-answer-'+number);
+      if(!selected){answer.innerHTML='<p>Choose an option first.</p>';answer.classList.add('show');return}
+      const chosen=question.options[Number(selected.value)]||'';
+      const correct=chosen.trim().toLowerCase()===question.answer.trim().toLowerCase();
+      answer.innerHTML='<strong>'+(correct?'That’s right.':'Not quite; compare your choice with the answer.')+'</strong><p>Answer: '+esc(question.answer)+'</p><p>'+esc(question.explanation||'')+'</p>';
+      answer.classList.add('show');
+    });
+    content.querySelectorAll('[data-reveal-question]').forEach(button=>button.onclick=()=>{
+      const number=Number(button.dataset.revealQuestion),answer=document.getElementById('ai-answer-'+number),response=document.getElementById('ai-response-'+number);
+      if(!response.value.trim()){response.focus();return}
+      answer.classList.toggle('show');button.textContent=answer.classList.contains('show')?'Hide suggested answer':'Show suggested answer';
+    });
+    document.getElementById('backToTopics').onclick=()=>{showStudyPage('subject');renderSubject()};
+  }catch(error){
+    content.innerHTML='<div class="eyebrow">'+(past?'Past questions':esc(subject.name))+'</div><h1>'+esc(title)+'</h1><p class="active-recall-error">'+esc(error.message||'Questions could not be created. Please try again.')+'</p><button class="primary" id="retryPractice">Try again</button><button class="secondary" id="backToTopics">Back to subject</button>';
+    document.getElementById('retryPractice').onclick=()=>renderPractice(topic,kinds,past);
+    document.getElementById('backToTopics').onclick=()=>{showStudyPage('subject');renderSubject()};
+  }
 }
 
 document.addEventListener('click',event=>{
