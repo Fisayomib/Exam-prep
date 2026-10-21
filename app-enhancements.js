@@ -38,13 +38,13 @@ function showStudyPage(name){
   window.scrollTo(0,0);
 }
 
-async function renderPractice(topic,kinds,past){
+async function renderPractice(topic,kinds,past,questionCounts={}){
   const subject=activeSubject();
   const title=past?'Past-question practice':topic?'Practise: '+topic.name:subject.name+' practice';
   const selectedTopics=topic?[topic]:subject.topics;
   const sourceNotes=past
-    ?(subject.pastSources||[]).map(source=>'[Past question file: '+source.name+']\n'+source.text).join('\n\n').slice(0,60000)
-    :selectedTopics.map(item=>'[Topic: '+item.name+']\n'+(item.sourceText||'')).filter(text=>text.trim()).join('\n\n').slice(0,60000);
+    ?(subject.pastSources||[]).map(source=>'[Past question file: '+source.name+']\n'+source.text).join('\n\n').slice(0,200000)
+    :selectedTopics.map(item=>'[Topic: '+item.name+']\n'+(item.sourceText||'')).filter(text=>text.trim()).join('\n\n').slice(0,200000);
   const summaryExtraContext=selectedTopics.map(item=>item.aiSummary?JSON.stringify(item.aiSummary):'').filter(Boolean).join('\n\n').slice(0,12000);
   const content=document.getElementById('practiceContent');
   showStudyPage('practice');
@@ -60,14 +60,15 @@ async function renderPractice(topic,kinds,past){
       topic:topic?topic.name:(past?'uploaded past questions for '+subject.name:subject.name+' topics'),
       sourceNotes:sourceNotes,
       summaryExtraContext:past?'Use these past questions as style examples. Create new questions and do not copy questions verbatim.':summaryExtraContext,
-      kinds:kinds
+      kinds:kinds,
+      questionCounts:questionCounts
     });
     const questions=Array.isArray(result.questions)?result.questions.filter(question=>question&&kinds.includes(question.kind)&&typeof question.question==='string'&&typeof question.answer==='string'):[];
     if(!questions.length)throw new Error('No usable questions were returned. Please try again.');
     const grouped=kinds.map(kind=>{
       const list=questions.filter(question=>question.kind===kind);
       if(!list.length)return '';
-      const heading=kind==='objective'?'Objective questions':kind==='theory'?'Theory questions':'Flashcards';
+      const heading=(kind==='objective'?'Objective questions':kind==='theory'?'Theory questions':'Flashcards')+' ('+list.length+')';
       const cards=list.map((question,index)=>{
         const number=questions.indexOf(question);
         const prompt='<p><strong>'+ (index+1)+'. '+esc(question.question)+'</strong></p>';
@@ -101,7 +102,7 @@ async function renderPractice(topic,kinds,past){
     document.getElementById('backToTopics').onclick=()=>{showStudyPage('subject');renderSubject()};
   }catch(error){
     content.innerHTML='<div class="eyebrow">'+(past?'Past questions':esc(subject.name))+'</div><h1>'+esc(title)+'</h1><p class="active-recall-error">'+esc(error.message||'Questions could not be created. Please try again.')+'</p><button class="primary" id="retryPractice">Try again</button><button class="secondary" id="backToTopics">Back to subject</button>';
-    document.getElementById('retryPractice').onclick=()=>renderPractice(topic,kinds,past);
+    document.getElementById('retryPractice').onclick=()=>renderPractice(topic,kinds,past,questionCounts);
     document.getElementById('backToTopics').onclick=()=>{showStudyPage('subject');renderSubject()};
   }
 }
@@ -127,7 +128,7 @@ document.addEventListener('click',event=>{
   if(event.target.closest('#pastQuestionPractice')){
     const subject=activeSubject();
     if(!subject?.past.length){toast('Add past questions to this subject first.');currentTab='past';renderSubject();return;}
-    renderPractice(null,['objective','theory'],true);
+    openPractice(null,true);
   }
 });
 
