@@ -170,7 +170,7 @@
       <div class="sidebar-bottom"><div class="user-row"><span class="avatar" id="accountAvatar">S</span><span id="accountLabel">Student account</span></div><div style="padding:11px 0 0 44px">Free study space</div><button class="account-signout" id="signOutButton" type="button">Sign out</button></div>
     </aside>
     <main class="main">
-      <header class="topbar"><span class="crumb" id="breadcrumb">Workspace&nbsp; / &nbsp;Overview</span><div class="top-actions"><button class="secondary" id="appearanceButton" aria-label="Choose appearance">◒&nbsp; Appearance</button><span class="avatar">S</span></div></header>
+      <header class="topbar"><span class="crumb" id="breadcrumb">Workspace&nbsp; / &nbsp;Overview</span><div class="top-actions"><button class="secondary" id="appearanceButton" aria-label="Choose appearance">◒&nbsp; Appearance</button><span class="avatar" id="topAccountAvatar" aria-label="Student account">S</span></div></header>
       <section class="content">
         <div id="dashboardScreen" class="screen active">
           <div class="heading-row"><div><div class="eyebrow">Your study space</div><h1>Make every study session count.</h1><p>Your subjects, upcoming assessments, and next steps in one place.</p></div><button class="primary" id="newSubjectBtn">＋&nbsp; Add a subject</button></div>
@@ -312,6 +312,7 @@
       document.body.classList.add('auth-required');
       document.getElementById('accountLabel').textContent='Student account';
       document.getElementById('accountAvatar').textContent='S';
+      const topAvatar=document.getElementById('topAccountAvatar');topAvatar.textContent='S';topAvatar.setAttribute('aria-label','Student account');topAvatar.removeAttribute('title');
       setAuthMode('signin');
     }
     async function enterAccount(user){
@@ -330,6 +331,7 @@
       const username=profile.data?.username||user.user_metadata?.username||'Student';
       document.getElementById('accountLabel').textContent=username;
       document.getElementById('accountAvatar').textContent=username.slice(0,1).toUpperCase();
+      const topAvatar=document.getElementById('topAccountAvatar');topAvatar.textContent=username.trim().slice(0,1).toUpperCase();topAvatar.setAttribute('aria-label',username+' account');topAvatar.title=username;
       accountHydrated=true;accountLoadingId=null;document.body.classList.remove('auth-required','auth-checking');authMessage('');
       renderDashboard();renderSidebar();
       let savedStudyView=null;
