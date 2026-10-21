@@ -516,35 +516,73 @@
         if(error)toast('Your changes could not sync. Check your connection and try again.');
       },350);
     }
+    function friendlyAuthError(error){
+      const message=error?.message||String(error||'');
+      if(/failed to fetch|network|timed out|timeout|abort/i.test(message)){
+        return 'Studyspace could not reach Supabase. Check your internet connection and try again.';
+      }
+      return message||'Sign-in failed. Please try again.';
+    }
+    async function supabaseFetchWithTimeout(input,init={}){
+      const controller=new AbortController();
+      const parentSignal=init.signal;
+      let timedOut=false;
+      const timer=setTimeout(()=>{timedOut=true;controller.abort()},12000);
+      const abortFromParent=()=>controller.abort(parentSignal?.reason);
+      if(parentSignal?.aborted)abortFromParent();
+      else parentSignal?.addEventListener('abort',abortFromParent,{once:true});
+      try{
+        return await window.fetch(input,{...init,signal:controller.signal});
+      }catch(error){
+        if(timedOut)throw new TypeError('Supabase request timed out after 12 seconds.');
+        throw error;
+      }finally{
+        clearTimeout(timer);
+        parentSignal?.removeEventListener('abort',abortFromParent);
+      }
+    }
     async function startAuthentication(){
       const setup=document.getElementById('authSetup');
       document.getElementById('authSwitch').onclick=()=>setAuthMode(authMode==='signin'?'signup':'signin');
       const config=window.STUDYSPACE_SUPABASE||{};
       if(!config.url||!config.anonKey||!window.supabase?.createClient){document.body.classList.remove('auth-checking');authMessage('Connect Supabase to enable account sign-in.');return}
       setup.hidden=true;
-      studyspaceClient=window.supabase.createClient(config.url,config.anonKey);
+      studyspaceClient=window.supabase.createClient(config.url,config.anonKey,{global:{fetch:supabaseFetchWithTimeout}});
       document.getElementById('authForm').addEventListener('submit',async event=>{
         event.preventDefault();
-        const form=event.currentTarget; if(!form.reportValidity())return;
+        const form=event.currentTarget;
+        if(!form.reportValidity())return;
+        const submitButton=document.getElementById('authSubmit');
+        if(submitButton.disabled)return;
         const email=document.getElementById('authEmail').value.trim();
         const password=document.getElementById('authPassword').value;
-        authMessage(authMode==='signup'?'Creating your account…':'Signing you in…');
-        let result;
+        const submittingMode=authMode;
+        submitButton.disabled=true;
+        authMessage(submittingMode==='signup'?'Creating your account…':'Signing you in…');
         try{
-          result=await withTimeout((async()=>{
-            if(authMode==='signup'){
+          const result=await withTimeout((async()=>{
+            if(submittingMode==='signup'){
               const username=document.getElementById('authUsername').value.trim();
               return await studyspaceClient.auth.signUp({email,password,options:{data:{username},emailRedirectTo:location.href}});
             }
             return await studyspaceClient.auth.signInWithPassword({email,password});
           })(),'Supabase did not respond in time. Check your internet connection and try again.');
-        }catch(error){authMessage(error?.message||'Sign-in could not connect. Check your internet connection and try again.',true);return}
-        if(authMode==='signup'&&!result.error&&!result.data.session){authMessage('Check your email to confirm your account, then return here to sign in.');return}
-        if(result.error){
-          const usernameConflict=/profiles_username_lower_unique|duplicate key/i.test(result.error.message);
-          authMessage(usernameConflict?'That username is already taken. Choose another one.':result.error.message,true);return;
+          if(result.error){
+            const usernameConflict=/profiles_username_lower_unique|duplicate key/i.test(result.error.message||'');
+            authMessage(usernameConflict?'That username is already taken. Choose another one.':friendlyAuthError(result.error),true);
+            return;
+          }
+          if(submittingMode==='signup'&&!result.data.session){
+            authMessage('Check your email to confirm your account, then return here to sign in.');
+            return;
+          }
+          if(result.data.user)await enterAccount(result.data.user);
+          else authMessage('Supabase did not return an account. Please try again.',true);
+        }catch(error){
+          authMessage(friendlyAuthError(error),true);
+        }finally{
+          submitButton.disabled=false;
         }
-        if(result.data.user)await enterAccount(result.data.user);
       });
       document.getElementById('signOutButton').onclick=async()=>{await studyspaceClient.auth.signOut();leaveAccount()};
       studyspaceClient.auth.onAuthStateChange((event,session)=>{
