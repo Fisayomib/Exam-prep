@@ -41,3 +41,5 @@
 .mode-switch button[aria-pressed="true"]{background:var(--green);color:#fff}
 .palette-option[aria-pressed="true"]{border-color:var(--green);box-shadow:0 0 0 2px color-mix(in srgb,var(--green) 14%,transparent)}
 
+
+:root[data-mode="dark"] .summary-box p,:root[data-mode="dark"] .summary-box li{color:var(--ink)}
