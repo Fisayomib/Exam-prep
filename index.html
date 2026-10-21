@@ -390,7 +390,7 @@
         '<h2>Remembered correctly</h2>'+(feedback.rememberedCorrectly.length?'<ul>'+feedback.rememberedCorrectly.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<p>No correct points were identified yet.</p>')+
         '<h2>Missed</h2>'+(feedback.missed.length?'<ul>'+feedback.missed.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<p>No key points appear to be missing.</p>')+
         '<h2>Inaccurate</h2>'+(feedback.inaccurate.length?'<ul>'+feedback.inaccurate.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<p>No inaccuracies were identified.</p>')+
-        '<p class="active-recall-source">Feedback should be grounded in this topic’s notes and available AI summary context.</p></section>':'')+
+        '<p>'+esc(feedback.closingNote||'Keep going; use the missed points as a guide for your next fresh session.')+'</p><p class="active-recall-source">Feedback is grounded in this topic’s notes and available AI summary context.</p></section>':'')+
       '<div class="active-recall-footer"><button type="button" class="secondary" id="activeRecallFresh">Start a fresh session</button></div>';
     $('#activeRecallContent').innerHTML=html;
     $('#activeRecallForm').onsubmit=async function(event){
@@ -402,7 +402,7 @@
       try{
         const result=await callStudyAI('feedback',{subject:subject.name,topic:topic.name,answer:answer,sourceNotes:noteText,summaryExtraContext:summaryContext,attempt:attempt});
         if(result.error)throw result.error;
-        const value=result.data;
+        const value=result;
         if(!value||!Array.isArray(value.rememberedCorrectly)||!Array.isArray(value.missed)||!Array.isArray(value.inaccurate))throw new Error('The feedback response was incomplete. Please try again.');
         feedback=value;busy=false;render();$('#activeRecallAnswer').value=answer;
       }catch(error){busy=false;render();$('#activeRecallAnswer').value=answer;$('#activeRecallStatus').innerHTML='<p class="active-recall-error">'+esc(error.message||'Feedback could not be generated. Please try again.')+'</p>'}
