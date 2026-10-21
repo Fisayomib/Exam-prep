@@ -43,3 +43,14 @@
 
 
 :root[data-mode="dark"] .summary-box p,:root[data-mode="dark"] .summary-box li{color:var(--ink)}
+
+.practice-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:17px 0}
+.practice-option{min-width:0;border:1px solid var(--line);border-radius:13px;background:var(--paper);padding:10px}
+.practice-option .choice{margin:0;border:0;background:transparent;padding:5px}
+.question-count-field{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 5px 3px;color:var(--muted);font-size:12px;font-weight:650}
+.question-count-field input{width:78px;border:1px solid var(--line);border-radius:8px;background:var(--canvas);color:var(--ink);padding:6px 8px}
+.question-count-field input:disabled{opacity:.55}
+.summary-box h3{font-size:16px;margin:14px 0 5px}
+.summary-self-check{border-top:1px solid var(--line);padding:10px 0}
+.summary-self-check>summary{cursor:pointer;font-weight:650;color:var(--ink)}
+.summary-self-check p{margin-bottom:0}
