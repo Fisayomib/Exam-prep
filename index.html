@@ -322,7 +322,7 @@
         for(let pageNumber=1;pageNumber<=pdf.numPages;pageNumber++){
           const page=await pdf.getPage(pageNumber),content=await page.getTextContent();
           pages.push(content.items.map(item=>item.str||'').join(' '));
-          if(pages.join('\n').length>80000)break;
+          if(pages.join('\n').length>200000)break;
         }
         extracted=pages.join('\n');
       }else if(name.endsWith('.docx')){
@@ -337,13 +337,13 @@
         for(const path of slideNames){
           const xml=await zip.files[path].async('text'),doc=new DOMParser().parseFromString(xml,'application/xml');
           slides.push([...doc.getElementsByTagName('a:t')].map(node=>node.textContent||'').join(' '));
-          if(slides.join('\n').length>80000)break;
+          if(slides.join('\n').length>200000)break;
         }
         extracted=slides.join('\n');
       }else throw new Error('Use a PDF, PPTX, DOCX, TXT or MD file. This file type is not supported yet.');
       extracted=String(extracted).replace(/\u0000/g,'').trim();
       if(!extracted)throw new Error(file.name+' did not contain readable text. Scanned image-only PDFs need OCR before they can be used.');
-      return extracted.slice(0,80000);
+      return extracted.slice(0,200000);
     }
 
     async function callStudyAI(action,payload){
