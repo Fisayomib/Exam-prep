@@ -201,9 +201,6 @@
   <nav class="mobile-nav" aria-label="Mobile navigation"><button class="active" data-screen="dashboard"><span>⌂</span>Home</button><button data-screen="subjects"><span>▦</span>Subjects</button><button data-screen="calendar"><span>◷</span>Calendar</button></nav>
   <div class="modal-backdrop" id="modalBackdrop" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle"></h2><p id="modalSubtitle"></p></div><button class="close" id="closeModal" aria-label="Close dialog">×</button></div><div id="modalBody"></div><div class="modal-actions" id="modalActions"></div></section></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.13.0/mammoth.browser.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script>
@@ -300,14 +297,27 @@
     }
     function openTestModal(editIndex=null){let s=activeSubject();if(!s.topics.length){toast('Upload notes and confirm topics before creating a test.');return}s.tests=s.tests||[];let existing=editIndex===null?null:s.tests[editIndex];openModal(existing?'Update test topics':'Create a test',existing?'Add newly available topics or adjust this test’s scope.':'Give this test its own date and choose from topics confirmed in this subject.',`<form id="testForm"><div class="field"><label for="testName">Test name</label><input id="testName" required value="${esc(existing?.name||'') }" placeholder="e.g. Mid-semester test" /></div><div class="field"><label for="testDate">Test date</label><input id="testDate" required type="date" value="${esc(existing?.date||'')}" /></div><div class="field"><label>Topics for this test</label>${s.topics.map(t=>`<label class="choice" style="margin:6px 0"><input type="checkbox" value="${esc(t.name)}" ${existing?.topics.includes(t.name)?'checked':''}><span>${esc(t.name)}</span></label>`).join('')}</div></form>`,`<button class="secondary" data-cancel>Cancel</button><button class="primary" id="saveTest" type="submit" form="testForm">${existing?'Save changes':'Create test'}</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$('#testForm').onsubmit=e=>{e.preventDefault();let f=$('#testForm');if(!f.reportValidity())return;let t={name:$('#testName').value.trim(),date:$('#testDate').value,topics:$$('#testForm input[type=checkbox]:checked').map(x=>x.value)};if(editIndex===null)s.tests.push(t);else s.tests[editIndex]=t;save();closeModal();currentTab='tests';persistStudyView('subject');renderSubject();toast(existing?'Test updated.':'Test added to your subject.')}}
     function editTestTopics(i){openTestModal(i)}
+    const studyLibraryLoads={};
+    function loadStudyLibrary(src,globalName){
+      if(window[globalName])return Promise.resolve(window[globalName]);
+      if(studyLibraryLoads[src])return studyLibraryLoads[src];
+      studyLibraryLoads[src]=new Promise((resolve,reject)=>{
+        const script=document.createElement('script');script.src=src;script.async=true;
+        const timer=setTimeout(()=>{script.remove();reject(new Error('A document reader took too long to load. Check your connection and try again.'))},15000);
+        script.onload=()=>{clearTimeout(timer);window[globalName]?resolve(window[globalName]):reject(new Error('A document reader could not start. Refresh and try again.'))};
+        script.onerror=()=>{clearTimeout(timer);reject(new Error('A document reader could not load. Check your connection and try again.'))};
+        document.head.appendChild(script);
+      }).catch(error=>{delete studyLibraryLoads[src];throw error});
+      return studyLibraryLoads[src];
+    }
     async function extractNoteText(file){
       const name=file.name.toLowerCase();
       let extracted='';
       if(name.endsWith('.txt')||name.endsWith('.md')) extracted=await file.text();
       else if(name.endsWith('.pdf')){
-        if(!window.pdfjsLib)throw new Error('The PDF reader did not load. Refresh the page and try again.');
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        const pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+        const pdfjs=await loadStudyLibrary('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','pdfjsLib');
+        pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
         const pages=[];
         for(let pageNumber=1;pageNumber<=pdf.numPages;pageNumber++){
           const page=await pdf.getPage(pageNumber),content=await page.getTextContent();
@@ -316,12 +326,12 @@
         }
         extracted=pages.join('\n');
       }else if(name.endsWith('.docx')){
-        if(!window.mammoth)throw new Error('The Word reader did not load. Refresh the page and try again.');
-        const result=await window.mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()});
+        const mammoth=await loadStudyLibrary('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.13.0/mammoth.browser.min.js','mammoth');
+        const result=await mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()});
         extracted=result.value||'';
       }else if(name.endsWith('.pptx')){
-        if(!window.JSZip)throw new Error('The PowerPoint reader did not load. Refresh the page and try again.');
-        const zip=await window.JSZip.loadAsync(await file.arrayBuffer());
+        const JSZip=await loadStudyLibrary('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js','JSZip');
+        const zip=await JSZip.loadAsync(await file.arrayBuffer());
         const slideNames=Object.keys(zip.files).filter(path=>/^ppt\/slides\/slide\d+\.xml$/.test(path)).sort((a,b)=>Number(a.match(/slide(\d+)/)[1])-Number(b.match(/slide(\d+)/)[1]));
         const slides=[];
         for(const path of slideNames){
@@ -449,20 +459,31 @@
       const topAvatar=document.getElementById('topAccountAvatar');topAvatar.textContent='S';topAvatar.setAttribute('aria-label','Student account');topAvatar.removeAttribute('title');
       setAuthMode('signin');
     }
+    function withTimeout(promise,message,timeoutMs=15000){
+      let timer;
+      return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),timeoutMs)})]).finally(()=>clearTimeout(timer));
+    }
     async function enterAccount(user){
       if(accountHydrated&&authUser?.id===user.id)return;
       if(accountLoadingId===user.id)return;
       accountLoadingId=user.id;
       authUser=user;accountHydrated=false;
       authMessage('Loading your study space…');
-      const {data,error}=await studyspaceClient.from('student_data').select('payload').eq('user_id',user.id).maybeSingle();
-      if(error){authUser=null;accountLoadingId=null;document.body.classList.remove('auth-checking');authMessage('Could not load your account data. Check that the database setup has been applied, then try again.',true);return}
-      const payload=data?.payload||{};
-      subjects=Array.isArray(payload.subjects)?payload.subjects:[];
-      localStorage.setItem(accountKey(testStoreKey),JSON.stringify(payload.tests||{}));
-      localStorage.setItem(accountKey(storeKey),JSON.stringify(subjects));
-      const profile=await studyspaceClient.from('profiles').select('username').eq('id',user.id).maybeSingle();
-      const username=profile.data?.username||user.user_metadata?.username||'Student';
+      try{
+        const {data,error}=await withTimeout(
+          studyspaceClient.from('student_data').select('payload').eq('user_id',user.id).maybeSingle(),
+          'Your study space is taking too long to load. Check your connection and try again.'
+        );
+        if(error)throw error;
+        const payload=data?.payload||{};
+        subjects=Array.isArray(payload.subjects)?payload.subjects:[];
+        localStorage.setItem(accountKey(testStoreKey),JSON.stringify(payload.tests||{}));
+        localStorage.setItem(accountKey(storeKey),JSON.stringify(subjects));
+        const profile=await withTimeout(
+          studyspaceClient.from('profiles').select('username').eq('id',user.id).maybeSingle(),
+          'Your profile is taking too long to load.'
+        ).catch(()=>({data:null,error:null}));
+        const username=profile.data?.username||user.user_metadata?.username||'Student';
       document.getElementById('accountLabel').textContent=username;
       document.getElementById('accountAvatar').textContent=username.slice(0,1).toUpperCase();
       const topAvatar=document.getElementById('topAccountAvatar');topAvatar.textContent=username.trim().slice(0,1).toUpperCase();topAvatar.setAttribute('aria-label',username+' account');topAvatar.title=username;
@@ -477,6 +498,11 @@
       }else if(['dashboard','subjects','calendar'].includes(savedStudyView?.screen)){
         showStudyPage(savedStudyView.screen);
       }else showStudyPage('dashboard');
+      }catch(error){
+        authUser=null;accountHydrated=false;accountLoadingId=null;
+        document.body.classList.remove('auth-checking');
+        authMessage(error?.message||'Could not load your study space. Check your connection and try again.',true);
+      }
     }
     function queueAccountSync(){
       if(!studyspaceClient||!authUser||!accountHydrated)return;
@@ -501,11 +527,16 @@
         const password=document.getElementById('authPassword').value;
         authMessage(authMode==='signup'?'Creating your account…':'Signing you in…');
         let result;
-        if(authMode==='signup'){
-          const username=document.getElementById('authUsername').value.trim();
-          result=await studyspaceClient.auth.signUp({email,password,options:{data:{username},emailRedirectTo:location.href}});
-          if(!result.error&&!result.data.session){authMessage('Check your email to confirm your account, then return here to sign in.');return}
-        }else result=await studyspaceClient.auth.signInWithPassword({email,password});
+        try{
+          result=await withTimeout((async()=>{
+            if(authMode==='signup'){
+              const username=document.getElementById('authUsername').value.trim();
+              return await studyspaceClient.auth.signUp({email,password,options:{data:{username},emailRedirectTo:location.href}});
+            }
+            return await studyspaceClient.auth.signInWithPassword({email,password});
+          })(),'Supabase did not respond in time. Check your internet connection and try again.');
+        }catch(error){authMessage(error?.message||'Sign-in could not connect. Check your internet connection and try again.',true);return}
+        if(authMode==='signup'&&!result.error&&!result.data.session){authMessage('Check your email to confirm your account, then return here to sign in.');return}
         if(result.error){
           const usernameConflict=/profiles_username_lower_unique|duplicate key/i.test(result.error.message);
           authMessage(usernameConflict?'That username is already taken. Choose another one.':result.error.message,true);return;
@@ -516,10 +547,18 @@
       studyspaceClient.auth.onAuthStateChange((event,session)=>{
         setTimeout(()=>{if(session?.user)enterAccount(session.user);else if(event==='SIGNED_OUT')leaveAccount()},0);
       });
-      const {data,error}=await studyspaceClient.auth.getSession();
-      if(error){document.body.classList.remove('auth-checking');authMessage('Could not check your sign-in session. Please refresh and try again.',true);return}
-      if(data.session?.user)await enterAccount(data.session.user);
-      else document.body.classList.remove('auth-checking');
+      try{
+        const {data,error}=await withTimeout(
+          studyspaceClient.auth.getSession(),
+          'Checking your sign-in timed out. Check your connection, then refresh the page.'
+        );
+        if(error)throw error;
+        if(data.session?.user)await enterAccount(data.session.user);
+        else document.body.classList.remove('auth-checking');
+      }catch(error){
+        document.body.classList.remove('auth-checking');
+        authMessage(error?.message||'Could not check your sign-in session. Refresh and try again.',true);
+      }
     }
     setAuthMode('signin');
     startAuthentication();
