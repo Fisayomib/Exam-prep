@@ -217,7 +217,6 @@
     const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
     function accountKey(key){return authUser?`${key}:${authUser.id}`:key}
     window.studyspaceAccountKey=accountKey;
-    window.studyspaceStoreKeys={storeKey,testStoreKey}
     function save(){localStorage.setItem(accountKey(storeKey),JSON.stringify(subjects));renderDashboard();renderSidebar();if(authUser)queueAccountSync()}
     function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
     function fmtDate(d){if(!d)return 'Date not set';return new Date(d+'T12:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
@@ -479,8 +478,8 @@
         if(error)throw error;
         const payload=data?.payload||{};
         subjects=Array.isArray(payload.subjects)?payload.subjects:[];
-        localStorage.setItem(window.studyspaceAccountKey(window.studyspaceStoreKeys.testStoreKey),JSON.stringify(payload.tests||{}));
-        localStorage.setItem(window.studyspaceAccountKey(window.studyspaceStoreKeys.storeKey),JSON.stringify(subjects));
+        localStorage.setItem(window.studyspaceAccountKey('studyspace-tests-v1'),JSON.stringify(payload.tests||{}));
+        localStorage.setItem(window.studyspaceAccountKey('studyspace-prototype-v1'),JSON.stringify(subjects));
         const profile=await withTimeout(
           studyspaceClient.from('profiles').select('username').eq('id',user.id).maybeSingle(),
           'Your profile is taking too long to load.'
@@ -510,7 +509,7 @@
       if(!studyspaceClient||!authUser||!accountHydrated)return;
       clearTimeout(accountSyncTimer);
       accountSyncTimer=setTimeout(async()=>{
-        const tests=JSON.parse(localStorage.getItem(window.studyspaceAccountKey(window.studyspaceStoreKeys.testStoreKey))||'{}');
+        const tests=JSON.parse(localStorage.getItem(window.studyspaceAccountKey('studyspace-tests-v1'))||'{}');
         const {error}=await studyspaceClient.from('student_data').upsert({user_id:authUser.id,payload:{subjects,tests},updated_at:new Date().toISOString()},{onConflict:'user_id'});
         if(error)toast('Your changes could not sync. Check your connection and try again.');
       },350);
