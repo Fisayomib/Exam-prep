@@ -216,6 +216,7 @@
     let currentId=null,currentTab='topics',pendingUpload=[],uploadKind='notes',pendingTest=null,practiceKinds=[];
     const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
     function accountKey(key){return authUser?`${key}:${authUser.id}`:key}
+    window.studyspaceAccountKey=accountKey
     function save(){localStorage.setItem(accountKey(storeKey),JSON.stringify(subjects));renderDashboard();renderSidebar();if(authUser)queueAccountSync()}
     function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
     function fmtDate(d){if(!d)return 'Date not set';return new Date(d+'T12:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
@@ -477,8 +478,8 @@
         if(error)throw error;
         const payload=data?.payload||{};
         subjects=Array.isArray(payload.subjects)?payload.subjects:[];
-        localStorage.setItem(accountKey(testStoreKey),JSON.stringify(payload.tests||{}));
-        localStorage.setItem(accountKey(storeKey),JSON.stringify(subjects));
+        localStorage.setItem(window.studyspaceAccountKey(testStoreKey),JSON.stringify(payload.tests||{}));
+        localStorage.setItem(window.studyspaceAccountKey(storeKey),JSON.stringify(subjects));
         const profile=await withTimeout(
           studyspaceClient.from('profiles').select('username').eq('id',user.id).maybeSingle(),
           'Your profile is taking too long to load.'
@@ -490,7 +491,7 @@
       accountHydrated=true;accountLoadingId=null;document.body.classList.remove('auth-required','auth-checking');authMessage('');
       renderDashboard();renderSidebar();
       let savedStudyView=null;
-      try{savedStudyView=JSON.parse(localStorage.getItem(accountKey('studyspace-view-v1'))||'null')}catch{}
+      try{savedStudyView=JSON.parse(localStorage.getItem(window.studyspaceAccountKey('studyspace-view-v1'))||'null')}catch{}
       if(savedStudyView?.screen==='subject'&&subjects.some(subject=>subject.id===savedStudyView.subjectId)){
         currentId=savedStudyView.subjectId;
         currentTab=['topics','tests','past'].includes(savedStudyView.tab)?savedStudyView.tab:'topics';
