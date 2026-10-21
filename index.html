@@ -238,7 +238,7 @@
       uploadKind=kind;
       const past=kind==='past';
       const accepted='.pdf,.pptx,.docx,.txt,.md';
-      openModal(past?'Add past questions':'Upload your notes',past?'Keep past questions in this subject for a separate practice mode.':'Upload readable course notes. Studyspace will extract their text so summaries and practice can use your material.','<div class="upload-zone"><div style="font-size:25px;color:var(--green)">'+(past?'▤':'↥')+'</div><div class="field" style="margin:9px 0"><label for="filePicker">Choose files</label><input id="filePicker" type="file" multiple accept="'+accepted+'" /></div><p>PDF, PowerPoint, Word, TXT and Markdown</p></div><div id="selectedFiles" class="file-list" style="margin-top:12px"></div><div class="note">Note text is extracted in your browser and saved with this subject in your private account. Supported: PDF, PPTX, DOCX, TXT and MD. Each file must be under 15 MB.</div>', '<button class="secondary" data-cancel>Cancel</button><button class="primary" id="continueUpload">'+(past?'Add files':'Review suggested topics')+'</button>');
+      openModal(past?'Add past questions':'Upload your notes',past?'Keep past questions in this subject for a separate practice mode.':'Upload readable course notes. Studyspace will extract their text so summaries and practice can use your material.','<div class="upload-zone"><div style="font-size:25px;color:var(--green)">'+(past?'▤':'↥')+'</div><div class="field" style="margin:9px 0"><label for="filePicker">Choose files</label><input id="filePicker" type="file" multiple accept="'+accepted+'" /></div><p>PDF, PowerPoint, Word, TXT and Markdown</p></div><div id="selectedFiles" class="file-list" style="margin-top:12px"></div><p id="uploadReadStatus" role="status" aria-live="polite"></p><div class="note">Note text is extracted in your browser and saved with this subject in your private account. Supported: PDF, PPTX, DOCX, TXT and MD. Each file must be under 15 MB.</div>', '<button class="secondary" data-cancel>Cancel</button><button class="primary" id="continueUpload">'+(past?'Add files':'Review suggested topics')+'</button>');
       $('#modalActions [data-cancel]').onclick=closeModal;
       $('#filePicker').onchange=e=>{$('#selectedFiles').innerHTML=[...e.target.files].map(f=>'<div class="file-item">▤ &nbsp;'+esc(f.name)+' <span style="color:#89938b">('+Math.max(1,Math.round(f.size/1024))+' KB)</span></div>').join('')};
       $('#continueUpload').onclick=()=>{
@@ -247,7 +247,18 @@
         if(files.some(file=>file.size>15*1024*1024)){toast('Each notes file must be under 15 MB.');return}
         pendingUpload=files;
         const subject=activeSubject();
-        if(past){subject.past.push(...files.map(file=>file.name));save();closeModal();renderSubject();toast('Past questions added to this subject.');return}
+        if(past){
+          const button=$('#continueUpload'),status=$('#uploadReadStatus');
+          button.disabled=true;status.textContent='Reading past questions…';
+          try{
+            const sources=[];
+            for(const file of files)sources.push({name:file.name,text:await extractNoteText(file)});
+            subject.past=[...new Set([...(subject.past||[]),...files.map(file=>file.name)])];
+            subject.pastSources=[...(subject.pastSources||[]),...sources];
+            save();closeModal();renderSubject();toast('Past questions saved and ready for AI practice.');
+          }catch(error){button.disabled=false;status.textContent=error.message||'Could not read this file. Try a PDF, PPTX, DOCX, TXT or MD file with selectable text.'}
+          return;
+        }
         closeModal();openTopicReview(files);
       };
     }
