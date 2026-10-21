@@ -212,13 +212,11 @@
       {id:'stats',name:'Statistics',exam:'',topics:[],notes:[],past:[],tests:[]}
     ];
     let subjects=JSON.parse(localStorage.getItem(storeKey)||'null')||starter;
-    let authUser=null;
+    window.studyspaceCurrentUser=null;
     let currentId=null,currentTab='topics',pendingUpload=[],uploadKind='notes',pendingTest=null,practiceKinds=[];
     const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-    function accountKey(key){return authUser?`${key}:${authUser.id}`:key}
-    window.studyspaceAccountKey=accountKey;
-    window.studyspaceSetAuthUser=user=>{authUser=user}
-    function save(){localStorage.setItem(accountKey(storeKey),JSON.stringify(subjects));renderDashboard();renderSidebar();if(authUser)queueAccountSync()}
+    function accountKey(key){const user=window.studyspaceCurrentUser;return user?`${key}:${user.id}`:key}
+    function save(){localStorage.setItem(accountKey(storeKey),JSON.stringify(subjects));renderDashboard();renderSidebar();if(window.studyspaceCurrentUser)queueAccountSync()}
     function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
     function fmtDate(d){if(!d)return 'Date not set';return new Date(d+'T12:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
     function syncSubjectTests(subject){if(!subject)return;subject.topics=Array.isArray(subject.topics)?subject.topics:[];subject.notes=Array.isArray(subject.notes)?subject.notes:[];subject.past=Array.isArray(subject.past)?subject.past:[];subject.tests=Array.isArray(subject.tests)?subject.tests:[];subject.topics=subject.topics.map(topic=>({...topic,name:String(topic?.name||'Untitled topic'),done:Boolean(topic?.done)}));const saved=JSON.parse(localStorage.getItem(accountKey(testStoreKey))||'{}')[subject.id]||[];for(const test of saved)if(!subject.tests.some(item=>item.name===test.name&&item.date===test.date))subject.tests.push(test);return subject.tests}
@@ -435,6 +433,7 @@
   <script>
     let studyspaceClient=null;
     let currentAuthUser=null;
+    function authAccountKey(key){return currentAuthUser?`${key}:${currentAuthUser.id}`:key}
     let accountHydrated=false;
     let accountLoadingId=null;
     let accountSyncTimer=null;
@@ -454,7 +453,7 @@
       authMessage('');
     }
     function leaveAccount(){
-      currentAuthUser=null;window.studyspaceSetAuthUser(null);accountHydrated=false;subjects=[];currentId=null;currentTab='topics';
+      currentAuthUser=null;window.studyspaceCurrentUser=null;accountHydrated=false;subjects=[];currentId=null;currentTab='topics';
       document.body.classList.remove('auth-checking');
       document.body.classList.add('auth-required');
       document.getElementById('accountLabel').textContent='Student account';
@@ -470,7 +469,7 @@
       if(accountHydrated&&currentAuthUser?.id===user.id)return;
       if(accountLoadingId===user.id)return;
       accountLoadingId=user.id;
-      currentAuthUser=user;window.studyspaceSetAuthUser(user);accountHydrated=false;
+      currentAuthUser=user;window.studyspaceCurrentUser=user;accountHydrated=false;
       authMessage('Loading your study space…');
       try{
         const {data,error}=await withTimeout(
@@ -480,8 +479,8 @@
         if(error)throw error;
         const payload=data?.payload||{};
         subjects=Array.isArray(payload.subjects)?payload.subjects:[];
-        localStorage.setItem(window.studyspaceAccountKey('studyspace-tests-v1'),JSON.stringify(payload.tests||{}));
-        localStorage.setItem(window.studyspaceAccountKey('studyspace-prototype-v1'),JSON.stringify(subjects));
+        localStorage.setItem(authAccountKey('studyspace-tests-v1'),JSON.stringify(payload.tests||{}));
+        localStorage.setItem(authAccountKey('studyspace-prototype-v1'),JSON.stringify(subjects));
         const profile=await withTimeout(
           studyspaceClient.from('profiles').select('username').eq('id',user.id).maybeSingle(),
           'Your profile is taking too long to load.'
@@ -493,7 +492,7 @@
       accountHydrated=true;accountLoadingId=null;document.body.classList.remove('auth-required','auth-checking');authMessage('');
       renderDashboard();renderSidebar();
       let savedStudyView=null;
-      try{savedStudyView=JSON.parse(localStorage.getItem(window.studyspaceAccountKey('studyspace-view-v1'))||'null')}catch{}
+      try{savedStudyView=JSON.parse(localStorage.getItem(authAccountKey('studyspace-view-v1'))||'null')}catch{}
       if(savedStudyView?.screen==='subject'&&subjects.some(subject=>subject.id===savedStudyView.subjectId)){
         currentId=savedStudyView.subjectId;
         currentTab=['topics','tests','past'].includes(savedStudyView.tab)?savedStudyView.tab:'topics';
@@ -502,7 +501,7 @@
         showStudyPage(savedStudyView.screen);
       }else showStudyPage('dashboard');
       }catch(error){
-        currentAuthUser=null;window.studyspaceSetAuthUser(null);accountHydrated=false;accountLoadingId=null;
+        currentAuthUser=null;window.studyspaceCurrentUser=null;accountHydrated=false;accountLoadingId=null;
         document.body.classList.remove('auth-checking');
         authMessage(error?.message||'Could not load your study space. Check your connection and try again.',true);
       }
@@ -511,7 +510,7 @@
       if(!studyspaceClient||!currentAuthUser||!accountHydrated)return;
       clearTimeout(accountSyncTimer);
       accountSyncTimer=setTimeout(async()=>{
-        const tests=JSON.parse(localStorage.getItem(window.studyspaceAccountKey('studyspace-tests-v1'))||'{}');
+        const tests=JSON.parse(localStorage.getItem(authAccountKey('studyspace-tests-v1'))||'{}');
         const {error}=await studyspaceClient.from('student_data').upsert({user_id:currentAuthUser.id,payload:{subjects,tests},updated_at:new Date().toISOString()},{onConflict:'user_id'});
         if(error)toast('Your changes could not sync. Check your connection and try again.');
       },350);
