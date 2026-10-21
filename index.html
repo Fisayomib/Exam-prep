@@ -398,13 +398,13 @@
         const selfCheckHtml=selfCheck.map(item=>'<details class="summary-self-check"><summary>'+esc(item.question||'Revision question')+'</summary><p>'+esc(item.answer||'')+'</p></details>').join('');
         $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="summary-meta">Exam-ready guide based on the uploaded notes</p><h2>Topic overview</h2><p>'+esc(summary.topicOverview||summary.simpleTerms||'')+'</p>'+(ideaHtml?'<h2>Key ideas and why they matter</h2><ul>'+ideaHtml+'</ul>':'')+(termsHtml?'<h2>Key terms</h2><ul>'+termsHtml+'</ul>':'')+(proceduresHtml?'<h2>Processes and steps</h2>'+proceduresHtml:'')+(comparisonsHtml?'<h2>Important comparisons</h2><ul>'+comparisonsHtml+'</ul>':'')+(examplesHtml?'<h2>Worked examples</h2>'+examplesHtml:'')+(checklist.length?'<h2>Exam checklist</h2><ul>'+checklist.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul>':'')+(mistakes.length?'<h2>Common mistakes to avoid</h2><ul>'+mistakes.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul>':'')+(selfCheckHtml?'<h2>Check your understanding</h2>'+selfCheckHtml:'')+(summary.coverageNote?'<div class="context-note"><strong>Coverage</strong><br/>'+esc(summary.coverageNote)+'</div>':'')+(summary.extraContext?'<div class="context-note"><strong>Extra context</strong><br/>'+esc(summary.extraContext)+'</div>':'')+(summary.gaps?'<div class="context-note"><strong>What the notes don’t cover</strong><br/>'+esc(summary.gaps)+'</div>':'')+'<div class="summary-actions"><button class="primary" id="summaryPractice">Practise this topic</button><button class="secondary" id="summaryRegenerate">Regenerate summary</button><button class="secondary" id="summaryDownload">↓ Download PDF</button></div>';
         $('#summaryPractice').onclick=()=>openPractice(i);$('#summaryRegenerate').onclick=()=>showSummary(i,true);$('#summaryDownload').onclick=()=>window.print();
-        $('#summaryContent [data-idea-check]').forEach(button=>button.onclick=()=>{
+        $$('#summaryContent [data-idea-check]').forEach(button=>button.onclick=()=>{
           const panel=$('#'+button.getAttribute('aria-controls')),opening=panel.hidden;
           panel.hidden=!opening;button.setAttribute('aria-expanded',String(opening));
           button.textContent=opening?'Hide check':'Check my understanding';
           if(opening)panel.querySelector('textarea')?.focus();
         });
-        $('#summaryContent [data-idea-form]').forEach(form=>form.onsubmit=async event=>{
+        $$('#summaryContent [data-idea-form]').forEach(form=>form.onsubmit=async event=>{
           event.preventDefault();
           const index=Number(form.dataset.ideaForm),item=ideas[index],concept=typeof item==='string'?item:(item?.concept||'this idea');
           const answer=form.querySelector('textarea').value.trim(),submit=form.querySelector('button[type="submit"]'),status=form.querySelector('.summary-check-status'),feedbackBox=$('#summary-check-feedback-'+index);
