@@ -357,28 +357,44 @@
       return result;
     }
 
-    async function showSummary(i){
+    async function showSummary(i,force=false){
       const subject=activeSubject(),topic=subject?.topics[i];
       if(!subject||!topic)return;
       showScreen('summary');
       const renderSummary=summary=>{
         const ideas=Array.isArray(summary.keyIdeas)?summary.keyIdeas:[];
-        $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="summary-meta">Based on materials confirmed for this topic</p><h2>In simple terms</h2><p>'+esc(summary.simpleTerms||'')+'</p><h2>Key ideas</h2>'+(ideas.length?'<ul>'+ideas.map(idea=>'<li>'+esc(idea)+'</li>').join('')+'</ul>':'<p>No key ideas were returned for this topic.</p>')+'<h2>Examples</h2><p>'+esc(summary.examples||'')+'</p>'+(summary.extraContext?'<div class="context-note"><strong>Extra context</strong><br/>'+esc(summary.extraContext)+'</div>':'')+(summary.gaps?'<div class="context-note"><strong>What the notes don’t cover</strong><br/>'+esc(summary.gaps)+'</div>':'')+'<div class="summary-actions"><button class="primary" id="summaryPractice">Practise this topic</button><button class="secondary" id="summaryDownload">↓ Download PDF</button></div>';
-        $('#summaryPractice').onclick=()=>openPractice(i);$('#summaryDownload').onclick=()=>window.print();
+        const terms=Array.isArray(summary.keyTerms)?summary.keyTerms:[];
+        const procedures=Array.isArray(summary.procedures)?summary.procedures:[];
+        const comparisons=Array.isArray(summary.comparisons)?summary.comparisons:[];
+        const examples=Array.isArray(summary.workedExamples)?summary.workedExamples:[];
+        const checklist=Array.isArray(summary.examChecklist)?summary.examChecklist:[];
+        const mistakes=Array.isArray(summary.commonMistakes)?summary.commonMistakes:[];
+        const selfCheck=Array.isArray(summary.selfCheck)?summary.selfCheck:[];
+        const ideaHtml=ideas.map(item=>{
+          const concept=typeof item==='string'?item:(item.concept||'');
+          return '<li><strong>'+esc(concept)+'</strong>'+(item.explanation?'<p>'+esc(item.explanation)+'</p>':'')+(item.examRelevance?'<p><strong>For exams:</strong> '+esc(item.examRelevance)+'</p>':'')+'</li>';
+        }).join('');
+        const termsHtml=terms.map(item=>'<li><strong>'+esc(item.term||'')+':</strong> '+esc(item.definition||'')+'</li>').join('');
+        const proceduresHtml=procedures.map(item=>'<h3>'+esc(item.title||'Process')+'</h3><ol>'+(Array.isArray(item.steps)?item.steps.map(step=>'<li>'+esc(step)+'</li>').join(''):'')+'</ol>').join('');
+        const comparisonsHtml=comparisons.map(item=>'<li><strong>'+esc(item.title||'')+'</strong><p>'+esc(item.comparison||'')+'</p></li>').join('');
+        const examplesHtml=examples.map(item=>'<h3>'+esc(item.title||'Worked example')+'</h3>'+(item.problem?'<p><strong>Problem:</strong> '+esc(item.problem)+'</p>':'')+(Array.isArray(item.reasoning)?'<ol>'+item.reasoning.map(step=>'<li>'+esc(step)+'</li>').join('')+'</ol>':'')+(item.result?'<p><strong>Result:</strong> '+esc(item.result)+'</p>':'')).join('');
+        const selfCheckHtml=selfCheck.map(item=>'<details class="summary-self-check"><summary>'+esc(item.question||'Revision question')+'</summary><p>'+esc(item.answer||'')+'</p></details>').join('');
+        $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="summary-meta">Exam-ready guide based on the uploaded notes</p><h2>Topic overview</h2><p>'+esc(summary.topicOverview||summary.simpleTerms||'')+'</p>'+(ideaHtml?'<h2>Key ideas and why they matter</h2><ul>'+ideaHtml+'</ul>':'')+(termsHtml?'<h2>Key terms</h2><ul>'+termsHtml+'</ul>':'')+(proceduresHtml?'<h2>Processes and steps</h2>'+proceduresHtml:'')+(comparisonsHtml?'<h2>Important comparisons</h2><ul>'+comparisonsHtml+'</ul>':'')+(examplesHtml?'<h2>Worked examples</h2>'+examplesHtml:'')+(checklist.length?'<h2>Exam checklist</h2><ul>'+checklist.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul>':'')+(mistakes.length?'<h2>Common mistakes to avoid</h2><ul>'+mistakes.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul>':'')+(selfCheckHtml?'<h2>Check your understanding</h2>'+selfCheckHtml:'')+(summary.coverageNote?'<div class="context-note"><strong>Coverage</strong><br/>'+esc(summary.coverageNote)+'</div>':'')+(summary.extraContext?'<div class="context-note"><strong>Extra context</strong><br/>'+esc(summary.extraContext)+'</div>':'')+(summary.gaps?'<div class="context-note"><strong>What the notes don’t cover</strong><br/>'+esc(summary.gaps)+'</div>':'')+'<div class="summary-actions"><button class="primary" id="summaryPractice">Practise this topic</button><button class="secondary" id="summaryRegenerate">Regenerate summary</button><button class="secondary" id="summaryDownload">↓ Download PDF</button></div>';
+        $('#summaryPractice').onclick=()=>openPractice(i);$('#summaryRegenerate').onclick=()=>showSummary(i,true);$('#summaryDownload').onclick=()=>window.print();
       };
       if(!topic.sourceText){
         $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="summary-meta">Upload notes for this topic to create a grounded summary.</p><button class="secondary" id="summaryBack">Back to subject</button>';
         $('#summaryBack').onclick=()=>{showScreen('subject');renderSubject()};return;
       }
-      if(topic.aiSummary){renderSummary(topic.aiSummary);return}
-      $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="summary-meta" role="status">Reading your notes and preparing a summary…</p>';
+      if(topic.aiSummary&&topic.aiSummaryVersion===2&&!force){renderSummary(topic.aiSummary);return}
+      $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="summary-meta" role="status">Reviewing your notes and building a detailed exam guide…</p>';
       try{
-        const summary=await callStudyAI('summary',{subject:subject.name,topic:topic.name,sourceNotes:topic.sourceText.slice(0,60000)});
-        if(!summary||typeof summary.simpleTerms!=='string'||!Array.isArray(summary.keyIdeas))throw new Error('The summary response was incomplete. Please try again.');
-        topic.aiSummary=summary;save();renderSummary(summary);
+        const summary=await callStudyAI('summary',{subject:subject.name,topic:topic.name,sourceNotes:topic.sourceText.slice(0,200000)});
+        if(!summary||typeof (summary.topicOverview||summary.simpleTerms)!=='string'||!Array.isArray(summary.keyIdeas))throw new Error('The summary response was incomplete. Please try again.');
+        topic.aiSummary=summary;topic.aiSummaryVersion=2;save();renderSummary(summary);
       }catch(error){
         $('#summaryContent').innerHTML='<div class="eyebrow">'+esc(subject.name)+' · Topic summary</div><h1>'+esc(topic.name)+'</h1><p class="active-recall-error">'+esc(error.message||'The summary could not be created. Please try again.')+'</p><button class="primary" id="retrySummary">Try again</button>';
-        $('#retrySummary').onclick=()=>showSummary(i);
+        $('#retrySummary').onclick=()=>showSummary(i,true);
       }
     }
     function startActiveRecall(topicIndex){
@@ -422,7 +438,21 @@
   }
   render();showScreen('activeRecall');
 }
-    function openPractice(topicIndex){let s=activeSubject(),topic=topicIndex===null?null:s.topics[topicIndex];practiceKinds=[];openModal('Choose a practice activity',topic?`For ${topic.name}. Choose one, two, or all three.`:'For this subject. Choose one, two, or all three.',`<div class="choice-grid">${[['objective','Objective questions','Multiple choice with answers and explanations.'],['theory','Theory questions','Written questions with sample answers.'],['flashcards','Flashcards','Prompts and answers for active recall.']].map(([v,l,d])=>`<label class="choice"><input type="checkbox" name="practice" value="${v}"><span><strong>${l}</strong><small>${d}</small></span></label>`).join('')}</div><div class="note">Past-question practice is a separate activity and uses past questions uploaded to this subject.</div>`,`<button class="secondary" data-cancel>Cancel</button><button class="primary" id="makePractice">Start practice</button>`);$('#modalActions [data-cancel]').onclick=closeModal;$('#makePractice').onclick=()=>{practiceKinds=$$('input[name=practice]:checked').map(x=>x.value);if(!practiceKinds.length){toast('Choose at least one practice activity.');return}closeModal();renderPractice(topic,practiceKinds,false)}}
+    function openPractice(topicIndex,isPast=false){
+      let s=activeSubject(),topic=topicIndex===null?null:s.topics[topicIndex];practiceKinds=[];
+      const choices=isPast?[['objective','Objective questions','Multiple choice with answers and explanations.'],['theory','Theory questions','Written questions with sample answers.']]:[['objective','Objective questions','Multiple choice with answers and explanations.'],['theory','Theory questions','Written questions with sample answers.'],['flashcards','Flashcards','Prompts and answers for active recall.']];
+      const subtitle=isPast?'For your uploaded past questions. Choose question types and an amount for each.':topic?'For '+topic.name+'. Choose question types and an amount for each.':'For this subject. Choose question types and an amount for each.';
+      openModal(isPast?'Set up past-question practice':'Choose a practice activity',subtitle,`<div class="practice-options">${choices.map(([v,l,d])=>`<div class="practice-option"><label class="choice"><input type="checkbox" name="practice" value="${v}"><span><strong>${l}</strong><small>${d}</small></span></label><label class="question-count-field"><span>Questions</span><input type="number" id="questionCount-${v}" min="1" max="20" step="1" value="5" disabled aria-label="${l} amount, from 1 to 20"></label></div>`).join('')}</div><div class="note">Choose between 1 and 20 questions for each selected type. More questions may take longer to generate.</div>${isPast?'':'<div class="note">Past-question practice is a separate activity and follows the style of past questions uploaded to this subject.</div>'}`,`<button class="secondary" data-cancel>Cancel</button><button class="primary" id="makePractice">Start practice</button>`);
+      $('#modalActions [data-cancel]').onclick=closeModal;
+      $$('input[name="practice"]').forEach(input=>input.addEventListener('change',()=>{document.getElementById('questionCount-'+input.value).disabled=!input.checked}));
+      $('#makePractice').onclick=()=>{
+        practiceKinds=$$('input[name=practice]:checked').map(input=>input.value);
+        if(!practiceKinds.length){toast('Choose at least one practice activity.');return}
+        const questionCounts={};
+        for(const kind of practiceKinds){const field=document.getElementById('questionCount-'+kind);if(!field.reportValidity())return;questionCounts[kind]=Number(field.value)}
+        closeModal();renderPractice(topic,practiceKinds,isPast,questionCounts);
+      };
+    }
     function renderPractice(topic,kinds,past){let s=activeSubject(),title=past?'Past-question practice':topic?`Practise: ${topic.name}`:`${s.name} practice`;let parts=kinds.map(k=>{let cap=k==='objective'?'Objective questions':k==='theory'?'Theory questions':'Flashcards';return `<section><h2 style="font-size:18px;margin:18px 0 7px">${cap}</h2>${(k==='objective'?[`Which statement best describes ${topic?.name||s.name}?`,`Which idea is most important to remember?`]:k==='theory'?[`Explain the main ideas in ${topic?.name||s.name} in your own words.`]:[`What is one key idea from ${topic?.name||s.name}?`,`How would you explain it simply?`]).map((q,i)=>`<div class="question"><p><strong>${i+1}. ${esc(q)}</strong></p>${k==='objective'?'<label><input type="radio" name="q'+k+i+'"> Option A</label> &nbsp; <label><input type="radio" name="q'+k+i+'"> Option B</label> &nbsp; <label><input type="radio" name="q'+k+i+'"> Option C</label>':''}<button class="quiet" data-answer="${k+i}">${k==='flashcards'?'Flip card':'Show answer'}</button><div class="answer" id="answer-${k+i}">Sample answer and explanation will be generated from the uploaded course notes. Answers should be shown after the student attempts the question.</div></div>`).join('')}</section>`}).join('');$('#practiceContent').innerHTML=`<div class="eyebrow">${past?'Past questions':esc(s.name)}</div><h1 style="font-size:28px;letter-spacing:-.04em;margin:4px 0">${esc(title)}</h1><p style="color:var(--muted);margin:0">A sample practice screen. Real question generation will connect to the uploaded materials.</p>${parts}<button class="secondary" id="backToTopics">Back to topics</button>`;$$('[data-answer]').forEach(b=>b.onclick=()=>{$('#answer-'+b.dataset.answer).classList.toggle('show');b.textContent=$('#answer-'+b.dataset.answer).classList.contains('show')?'Hide answer':'Show answer'});$('#backToTopics').onclick=()=>{showScreen('subject');renderSubject()};showScreen('practice')}
     function toast(msg){let el=$('#toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2600)}
     document.addEventListener('submit',event=>{if(event.target.id!=='testForm')return;const subject=subjects.find(item=>item.id===currentId);if(!subject)return;const test={name:$('#testName').value.trim(),date:$('#testDate').value,topics:$$('#testForm input[type=checkbox]:checked').map(input=>input.value)};const records=JSON.parse(localStorage.getItem(accountKey(testStoreKey))||'{}');records[subject.id]=records[subject.id]||[];const index=records[subject.id].findIndex(item=>item.name===test.name&&item.date===test.date);if(index<0)records[subject.id].push(test);else records[subject.id][index]=test;localStorage.setItem(accountKey(testStoreKey),JSON.stringify(records))},true);
