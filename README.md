@@ -1,36 +1,27 @@
-# Studyspace prototype
+# Studyspace
 
-A clickable, responsive browser prototype for the exam-preparation app. Open `index.html` in a modern browser.
+Studyspace is a browser-based study planner deployed on Vercel, with Supabase authentication and private per-user study data.
 
-## Included in this first pass
+## AI study tools
 
-- Create subjects and set or defer the general exam date.
-- Add multiple note files and review, rename, or remove proposed topics before confirming them.
-- Read a topic summary, with a print-to-PDF action.
-- Create tests with their own date and choose topics already confirmed for the subject. Edit the topic selection later.
-- Mark topics complete, then access topic practice and whole-subject practice.
-- Start a fresh, unsaved Active Recall session for any topic, write a free-text answer, and revise/resubmit after feedback.
-- Use a separate My subjects page and a separate Study calendar page from the left navigation.
-- Work through real flashcard-style front and back cards. A student must type an answer before revealing each back.
-- Choose from ten appearance palettes in light or dark mode, preview choices, and keep both preferences saved in this browser.
-- Upload past questions separately and open a separate past-question practice mode.
-- Save prototype state in this browser using local storage.
-- Create a student account with a unique username, email, and password; sign in and out with Supabase Auth.
-- Sync subjects and study progress to a private per-user database row protected by row-level security.
+- Upload PDF, PPTX, DOCX, TXT, or Markdown materials. Text is extracted in the browser and saved with the signed-in student's subject data.
+- Generate topic summaries grounded in uploaded notes. Any broader explanation is separated into **Extra context**, and unsupported details are called out.
+- Generate objective questions, written questions, and flashcards from topic notes. Whole-subject practice uses the confirmed topics' materials.
+- Start a fresh Active Recall session by writing everything remembered about a topic. Feedback is qualitative, based on the topic's notes and any extra context in its AI summary, and is not saved.
+- Generate past-question practice from readable text extracted from uploaded past-question files.
 
-## Prototype limits
+Scanned image-only PDFs are not supported yet; use PDFs with selectable text. Uploaded file text is limited to 80,000 characters per file and AI requests use a capped excerpt to keep responses focused.
 
-This remains a front-end prototype, not a connected AI product. After Supabase is configured, authentication and account-scoped subject data use the connected service. It does not upload or store file contents, read documents or handwriting, generate real topic suggestions, provide live AI feedback for Active Recall, summarize notes, or generate questions. The Active Recall screen is implemented, but note-grounded feedback requires document-text processing and deployment of the `active-recall-feedback` Supabase Edge Function. It will not invent feedback when source material is unavailable. The upload review uses file names as visible placeholder suggestions. The summary and practice screens show sample content. The PDF button opens the browser's print dialog, where a student can choose Save as PDF.
+## Deployment setup
 
-The dashboard previously used sample subjects in local storage. Authenticated accounts start with their own empty subject list. Clear the site's local storage to reset appearance preferences and any old demo state.
+1. Configure the Supabase project URL and publishable key in `supabase-config.js`.
+2. Run `supabase-schema.sql` in the Supabase SQL editor.
+3. In Vercel, set `OPENAI_API_KEY` as a **Secret** environment variable for Production. Never place this key in browser code, the repository, or a chat.
+4. Deploy the GitHub `main` branch to Vercel. The AI endpoint is served by the Vercel Function in `api/ai.mjs` and requires a valid Supabase sign-in.
+5. For local AI development, use Vercel's local development server so the `/api/ai` function and environment variables are available. A basic static server can display the interface but cannot run the AI endpoint.
 
-## Connect authentication and account storage
+OpenAI API usage is billed separately from a ChatGPT subscription. Keep an eye on API usage and set a usage limit in the OpenAI platform.
 
-1. Create a Supabase project.
-2. In the Supabase SQL editor, run `supabase-schema.sql`.
-3. Copy the project URL and its publishable/anon client key into `supabase-config.js`. Never put a `service_role` key in the browser.
-4. In Supabase Auth settings, enable email/password, configure the site URL and redirect URLs for the app's hosted address, and keep email confirmation enabled for launch.
-5. Serve the prototype from an HTTP(S) origin for email confirmation links; opening the HTML directly as a `file:` URL is not suitable for the redirect flow.
+## Data and privacy
 
-The app stays behind the sign-in screen until the project URL and client key are configured. Passwords are handled by Supabase Auth. The SQL enables row-level security for profiles and study data; each student can read or change only their own study-data row. The prototype currently stores notes as filenames only, not uploaded file contents.
-
+Supabase Auth handles passwords. Row-level security limits each student to their own study-data row. Uploaded note text is stored inside that student's private `student_data.payload` record. The OpenAI API key stays server-side in Vercel; the AI function verifies the student's Supabase session before processing a request.
