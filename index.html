@@ -238,7 +238,7 @@
       openModal(past?'Add past questions':'Upload your notes',past?'Keep past questions in this subject for a separate practice mode.':'Upload readable course notes. Studyspace will extract their text so summaries and practice can use your material.','<div class="upload-zone"><div style="font-size:25px;color:var(--green)">'+(past?'▤':'↥')+'</div><div class="field" style="margin:9px 0"><label for="filePicker">Choose files</label><input id="filePicker" type="file" multiple accept="'+accepted+'" /></div><p>PDF, PowerPoint, Word, TXT and Markdown</p></div><div id="selectedFiles" class="file-list" style="margin-top:12px"></div><p id="uploadReadStatus" role="status" aria-live="polite"></p><div class="note">Note text is extracted in your browser and saved with this subject in your private account. Supported: PDF, PPTX, DOCX, TXT and MD. Each file must be under 15 MB.</div>', '<button class="secondary" data-cancel>Cancel</button><button class="primary" id="continueUpload">'+(past?'Add files':'Review suggested topics')+'</button>');
       $('#modalActions [data-cancel]').onclick=closeModal;
       $('#filePicker').onchange=e=>{$('#selectedFiles').innerHTML=[...e.target.files].map(f=>'<div class="file-item">▤ &nbsp;'+esc(f.name)+' <span style="color:#89938b">('+Math.max(1,Math.round(f.size/1024))+' KB)</span></div>').join('')};
-      $('#continueUpload').onclick=()=>{
+      $('#continueUpload').onclick=async()=>{
         const files=[...$('#filePicker').files];
         if(!files.length){toast('Choose at least one file first.');return}
         if(files.some(file=>file.size>15*1024*1024)){toast('Each notes file must be under 15 MB.');return}
