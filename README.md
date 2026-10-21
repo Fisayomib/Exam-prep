@@ -5,12 +5,12 @@ Studyspace is a browser-based study planner deployed on Vercel, with Supabase au
 ## AI study tools
 
 - Upload PDF, PPTX, DOCX, TXT, or Markdown materials. Text is extracted in the browser and saved with the signed-in student's subject data.
-- Generate topic summaries grounded in uploaded notes. Any broader explanation is separated into **Extra context**, and unsupported details are called out.
-- Generate objective questions, written questions, and flashcards from topic notes. Whole-subject practice uses the confirmed topics' materials.
+- Generate detailed, exam-ready topic guides grounded in uploaded notes, with key terms, important processes, worked examples, exam checklists, common mistakes, and self-check questions where the notes support them. Any broader explanation is separated into **Extra context**, and unsupported details are called out.
+- Generate objective questions, written questions, and flashcards from topic notes. Students choose 1–20 questions for each selected type. Whole-subject practice uses the confirmed topics' materials.
 - Start a fresh Active Recall session by writing everything remembered about a topic. Feedback is qualitative, based on the topic's notes and any extra context in its AI summary, and is not saved.
 - Generate past-question practice from readable text extracted from uploaded past-question files.
 
-Scanned image-only PDFs are not supported yet; use PDFs with selectable text. Uploaded file text is limited to 80,000 characters per file and AI requests use a capped excerpt to keep responses focused.
+Scanned image-only PDFs are not supported yet; use PDFs with selectable text. Uploaded file text is limited to 200,000 characters per file, and each AI request accepts up to 200,000 characters of source text.
 
 ## Deployment setup
 
